@@ -50,13 +50,3 @@ mysql -u root  << EOF
 	select 'Now populating RF1...' as ' ';	
 	source populate_rf1_tables.sql
 EOF
-
-mysql -u root  << EOF
-	use rf1_conversion;
-	source create_rf2_utility_procedures.sql
-	source create_populateRF1_procedures.sql
-	select 'Now loading compatability package...' as ' ';	
-	source compatability_package_import_20160131.sql
-	select 'Now populating RF1...' as ' ';	
-	source populate_rf1_tables.sql
-EOF

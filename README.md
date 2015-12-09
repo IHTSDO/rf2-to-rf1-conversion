@@ -7,7 +7,7 @@ eg  <code>./do_conversion.sh ~/tmp/20160131_Beta/SnomedCT_RF2Release_INT_2016013
 
 ### Notes
 
-* The script will automatically strip any Beta prefix "x" characters from the filename
+* The script will automatically strip any Beta prefix "x" characters from filenames
 
 ### Example output
 <code>
