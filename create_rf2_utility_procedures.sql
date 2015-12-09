@@ -10,8 +10,8 @@ Purpose      : Extract an RF2 Snapshot from the FULL Tables
 
 DELIMITER $$
 
-DROP FUNCTION IF EXISTS `snomed`.`RF2_ModuleSourceFor` $$
-CREATE FUNCTION snomed.RF2_ModuleSourceFor(ID VARBINARY(18))
+DROP FUNCTION IF EXISTS `moduleSourceFor` $$
+CREATE FUNCTION moduleSourceFor(ID VARBINARY(18))
 RETURNS CHAR(4)
 BEGIN
 
@@ -30,8 +30,8 @@ BEGIN
   RETURN Source;
 END $$
 
-DROP FUNCTION IF EXISTS `snomed`.`RF2_RefSetInfo` $$
-CREATE FUNCTION snomed.RF2_RefSetInfo(refSetID VARCHAR(18)) RETURNS VARCHAR(2048) CHARACTER SET utf8 COLLATE utf8_bin
+DROP FUNCTION IF EXISTS `refSetInfo` $$
+CREATE FUNCTION refSetInfo(refSetID VARCHAR(18)) RETURNS VARCHAR(2048) CHARACTER SET utf8 COLLATE utf8_bin
 BEGIN
 
   DECLARE Res VARCHAR(2048) CHARACTER SET utf8 COLLATE utf8_bin;
@@ -40,29 +40,29 @@ BEGIN
   DECLARE DataType, RefSetType VARCHAR(30);
   DECLARE num, done TINYINT DEFAULT 0;
 
-  DECLARE SCT CURSOR FOR SELECT id1.TERM AS Field, linkedComponentID2 As DataType, id2.TERM As strDataType FROM snomed.rf2_ccirefset
-	INNER JOIN snomed.rf2_term id1 ON id1.conceptId = linkedComponentID1 AND id1.typeId = '900000000000013009'
-	INNER JOIN snomed.rf2_term id2 ON id2.conceptId = linkedComponentID2 AND id2.typeId = '900000000000013009'
+  DECLARE SCT CURSOR FOR SELECT id1.TERM AS Field, linkedComponentID2 As DataType, id2.TERM As strDataType FROM rf2_ccirefset
+	INNER JOIN rf2_term id1 ON id1.conceptId = linkedComponentID1 AND id1.typeId = '900000000000013009'
+	INNER JOIN rf2_term id2 ON id2.conceptId = linkedComponentID2 AND id2.typeId = '900000000000013009'
 	WHERE ReferencedComponentId = @RefSetID ORDER BY linkedInteger ASC;
   DECLARE CONTINUE HANDLER FOR SQLSTATE '02000' SET done = 1;
 
   -- Retrieves column order and datatypes for a given refset
   -- SET @RefsetId = 'someId';
-  -- SELECT ReferencedComponentId as RefsetId, id1.TERM AS Field, id2.TERM As strDataType, linkedInteger As FieldOrder FROM snomed.rf2_ccirefset
-  -- 	INNER JOIN snomed.rf2_term id1 ON id1.conceptId = linkedComponentID1 AND id1.typeId = '900000000000013009'
-  -- 	INNER JOIN snomed.rf2_term id2 ON id2.conceptId = linkedComponentID2 AND id2.typeId = '900000000000013009'
+  -- SELECT ReferencedComponentId as RefsetId, id1.TERM AS Field, id2.TERM As strDataType, linkedInteger As FieldOrder FROM rf2_ccirefset
+  -- 	INNER JOIN rf2_term id1 ON id1.conceptId = linkedComponentID1 AND id1.typeId = '900000000000013009'
+  -- 	INNER JOIN rf2_term id2 ON id2.conceptId = linkedComponentID2 AND id2.typeId = '900000000000013009'
   -- 	WHERE ReferencedComponentId = @RefsetId ORDER BY linkedInteger ASC;
 
   SET @RefSetID = refSetID;
   SET Res = CONCAT(@RefSetID, ' not recognised as a RefSet identifier');
   SET RefSetType = '';
 
-  SET str = (SELECT MAX(TERM) FROM snomed.rf2_term WHERE conceptId = @RefSetID AND typeId = '900000000000013009');
+  SET str = (SELECT MAX(TERM) FROM rf2_term WHERE conceptId = @RefSetID AND typeId = '900000000000013009');
 
   IF NOT (str IS NULL) THEN
   	SET str = CONCAT(@RefSetID,' ',str,' ::');
 
-  	SET num = (SELECT COUNT(refSetID) FROM snomed.rf2_ccirefset WHERE ReferencedComponentId = @RefSetID);
+  	SET num = (SELECT COUNT(refSetID) FROM rf2_ccirefset WHERE ReferencedComponentId = @RefSetID);
   	IF num > 0 THEN
   		OPEN SCT;
   		REPEAT
