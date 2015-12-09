@@ -43,7 +43,7 @@ mysql -u root  << EOF
 	source create_populateRF1_procedures.sql
 	source create_rf2_utility_procedures.sql
 	source create_rf2_extract_snapshot_procedure.sql
-	select 'Completed schema setup, now loading data...' as ' ';
+	select 'Completed schema setup, now loading RF2 data...' as ' ';
 	source rf2_import_20160131.sql
 	select 'RF2 import complete.  Now loading compatability pacakge...' as ' ';	
 	source compatability_package_import_20160131.sql

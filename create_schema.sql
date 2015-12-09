@@ -10,7 +10,7 @@ Purpose      : Define a table schema into which to load an RF2 FULL release
 
 DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `snomed`.`RF2_CreateTables` $$
+DROP PROCEDURE IF EXISTS `RF2_CreateTables` $$
 
 CREATE PROCEDURE RF2_CreateTables(strOPT VARCHAR(10))
 
