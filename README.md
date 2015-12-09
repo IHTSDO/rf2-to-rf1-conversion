@@ -9,12 +9,16 @@ eg  <code>./do_conversion.sh ~/tmp/20160131_Beta/SnomedCT_RF2Release_INT_2016013
 
 * The script will automatically strip any Beta prefix "x" characters from the filename
 
-##£ Example output
+### Example output
 <code>
+
 	...
+	
 	...
-	  inflating: tmp_extracted/res2_cRefset_RefinabilitySnapshot_INT_20160131.txt
-	  inflating: tmp_extracted/sct2_Qualifier_Snapshot_20160131.txt
+	
+	inflating: tmp_extracted/res2_cRefset_RefinabilitySnapshot_INT_20160131.txt
+	
+	inflating: tmp_extracted/sct2_Qualifier_Snapshot_20160131.txt
 	
 	Completed schema setup, now loading data...
 	
