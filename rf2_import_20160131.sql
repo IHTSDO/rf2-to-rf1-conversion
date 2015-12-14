@@ -41,7 +41,7 @@ LOAD DATA LOCAL INFILE "tmp_extracted/der2_ssRefset_ModuleDependencyFull_INT_201
 INSERT INTO IMPORTTIME_RF2 SET Event = '  END Import RF2 State Valid Files', DTSTAMP = '', TMSTAMP=CURRENT_TIME;
 
 CALL RF2_CreateIndexes;
-CALL ExtractSnapshot('20151208');
+CALL ExtractSnapshot('LATEST');
 CALL RF2_FixSnapshots;
 
 # Optional QA step - compare extracted snapshot with officially distributed one
