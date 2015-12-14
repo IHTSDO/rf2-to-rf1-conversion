@@ -11,7 +11,6 @@ eg  <code>./do_conversion.sh ~/tmp/20160131_Beta/SnomedCT_RF2Release_INT_2016013
 
 ### Example output
 <code>
-
 	...
 	
 	...
