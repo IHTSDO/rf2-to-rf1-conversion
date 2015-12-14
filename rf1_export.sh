@@ -13,12 +13,7 @@ fi
 generatedExportScript="tmp_exporter.sql"
 currentDir=`pwd`
 outputDirectory="${currentDir}/SnomedCT_RF1Release_INT_${releaseDate}"
-
-#function doJoin { 
-#	arrayItems=("${@}")
-	#Need to trim off the final delimiter
-#	printf "%s','" "${arrayItems[@]}" | rev | cut -c 4- | rev
-#}
+rm -rf ${outputDirectory}
 
 function doJoin { 
 	separator=$1
@@ -69,6 +64,9 @@ exportTable rf21_term Terminology/Content/sct1_Descriptions_en_INT_${releaseDate
 
 thisHeader=("RELATIONSHIPID" "CONCEPTID1" "RELATIONSHIPTYPE" "CONCEPTID2" "CHARACTERISTICTYPE" "REFINABILITY" "RELATIONSHIPGROUP")
 exportTable rf21_rel Terminology/Content/sct1_Relationships_Core_INT_${releaseDate}.txt  "${thisHeader[@]}"
+
+thisHeader=("CONCEPTID" "SNOMEDID" "FULLYSPECIFIEDNAME" "DEFINITION")
+exportTable rf21_def Terminology/Content/sct1_TextDefinitions_en-US_INT_${releaseDate}.txt  "${thisHeader[@]}"
 
 echo "\nPassing Generated RF1 Export script to MYSQL"
 
