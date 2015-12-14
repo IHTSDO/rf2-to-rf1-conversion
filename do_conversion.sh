@@ -18,8 +18,7 @@ fi
 
 #Unzip the files here, junking the structure
 localExtract="tmp_extracted"
-rm -rf $localExtract
-unzip -j ${releasePath} -d ${localExtract}
+unzip -j ${releasePath} -d ${localExtract} "*Full*"
 unzip -j ${compatPkgPath}  -d ${localExtract}
 
 #Rename any beta files
@@ -50,3 +49,7 @@ mysql -u root  << EOF
 	select 'Now populating RF1...' as ' ';	
 	source populate_rf1_tables.sql
 EOF
+
+rm -rf $localExtract
+
+source rf1_export.sh ${dbName} ${releaseDate}
