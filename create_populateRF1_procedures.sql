@@ -86,52 +86,52 @@ SET MagicNumber = (SELECT CASE ID
         WHEN '900000000000512005' THEN 99 /*Query specification type reference set (foundation metadata concept)*/
           WHEN '900000000000513000' THEN 99 /*Simple query specification reference set (foundation metadata concept)*/
         WHEN '900000000000516008' THEN 99 /*Annotation type reference set (foundation metadata concept)*/
-          WHEN '900000000000517004' THEN 99 /*Associated image reference set (foundation metadata concept)*/
+        WHEN '900000000000517004' THEN 99 /*Associated image reference set (foundation metadata concept)*/
         WHEN '900000000000521006' THEN 99 /*Association type reference set (foundation metadata concept)*/
-          WHEN '900000000000522004' THEN 99 /*Historical association reference set (foundation metadata concept)*/
+        WHEN '900000000000522004' THEN 99 /*Historical association reference set (foundation metadata concept)*/
         WHEN '900000000000534007' THEN 99 /*Module dependency reference set (foundation metadata concept)*/
         WHEN '900000000000538005' THEN 99 /*Description format reference set (foundation metadata concept)*/
 
-      WHEN '900000000000457003' THEN 99 /*Reference set attribute (foundation metadata concept)*/
+        WHEN '900000000000457003' THEN 99 /*Reference set attribute (foundation metadata concept)*/
         WHEN '900000000000491004' THEN 99 /*Attribute value (foundation metadata concept)*/
-          WHEN '900000000000410004' THEN 99 /*Refinability value (foundation metadata concept)*/
-            WHEN '900000000000007000' THEN 0 /*Not refinable (foundation metadata concept)*/
-            WHEN '900000000000392005' THEN 1 /*Optional refinability (foundation metadata concept)*/
-            WHEN '900000000000391003' THEN 2 /*Mandatory refinability (foundation metadata concept)*/
-          WHEN '900000000000481005' THEN 99 /*Concept inactivation value (foundation metadata concept)*/
-            WHEN '900000000000482003' THEN 2  /*Duplicate component (foundation metadata concept)*/
-            WHEN '900000000000483008' THEN 3  /*Outdated component (foundation metadata concept)*/
-            WHEN '900000000000484002' THEN 4  /*Ambiguous component (foundation metadata concept)*/
-            WHEN '900000000000485001' THEN 5  /*Erroneous component (foundation metadata concept)*/
-            WHEN '900000000000486000' THEN 6  /*Limited component (foundation metadata concept)*/
-            WHEN '900000000000487009' THEN 10 /*Component moved elsewhere (foundation metadata concept)*/
-            WHEN '900000000000492006' THEN 11 /*Pending move (foundation metadata concept)*/
-          WHEN '900000000000493001' THEN 99 /*Description inactivation value (foundation metadata concept)*/
-            WHEN '900000000000482003' THEN 2 /*Duplicate component (foundation metadata concept)*/
-            WHEN '900000000000483008' THEN 3 /*Outdated component (foundation metadata concept)*/
-            WHEN '900000000000485001' THEN 5 /*Erroneous component (foundation metadata concept)*/
-            WHEN '900000000000486000' THEN 6 /*Limited component (foundation metadata concept)*/
-            WHEN '900000000000494007' THEN 7 /*Inappropriate component (foundation metadata concept)*/
-            WHEN '900000000000495008' THEN 8 /*Concept non-current (foundation metadata concept)*/
-            WHEN '900000000000487009' THEN 10 /*Component moved elsewhere (foundation metadata concept)*/
-            WHEN '900000000000492006' THEN 11 /*Pending move (foundation metadata concept)*/
-          WHEN '900000000000546006' THEN 99 /*Inactive value (foundation metadata concept)*/
-          WHEN '900000000000545005' THEN 99 /*Active value (foundation metadata concept)*/
+        WHEN '900000000000410004' THEN 99 /*Refinability value (foundation metadata concept)*/
+        WHEN '900000000000007000' THEN 0 /*Not refinable (foundation metadata concept)*/
+        WHEN '900000000000392005' THEN 1 /*Optional refinability (foundation metadata concept)*/
+        WHEN '900000000000391003' THEN 2 /*Mandatory refinability (foundation metadata concept)*/
+        WHEN '900000000000481005' THEN 99 /*Concept inactivation value (foundation metadata concept)*/
+        WHEN '900000000000482003' THEN 2  /*Duplicate component (foundation metadata concept)*/
+        WHEN '900000000000483008' THEN 3  /*Outdated component (foundation metadata concept)*/
+        WHEN '900000000000484002' THEN 4  /*Ambiguous component (foundation metadata concept)*/
+        WHEN '900000000000485001' THEN 5  /*Erroneous component (foundation metadata concept)*/
+        WHEN '900000000000486000' THEN 6  /*Limited component (foundation metadata concept)*/
+        WHEN '900000000000487009' THEN 10 /*Component moved elsewhere (foundation metadata concept)*/
+        WHEN '900000000000492006' THEN 11 /*Pending move (foundation metadata concept)*/
+        WHEN '900000000000493001' THEN 99 /*Description inactivation value (foundation metadata concept)*/
+        WHEN '900000000000482003' THEN 2 /*Duplicate component (foundation metadata concept)*/
+        WHEN '900000000000483008' THEN 3 /*Outdated component (foundation metadata concept)*/
+        WHEN '900000000000485001' THEN 5 /*Erroneous component (foundation metadata concept)*/
+        WHEN '900000000000486000' THEN 6 /*Limited component (foundation metadata concept)*/
+        WHEN '900000000000494007' THEN 7 /*Inappropriate component (foundation metadata concept)*/
+        WHEN '900000000000495008' THEN 8 /*Concept non-current (foundation metadata concept)*/
+        WHEN '900000000000487009' THEN 10 /*Component moved elsewhere (foundation metadata concept)*/
+        WHEN '900000000000492006' THEN 11 /*Pending move (foundation metadata concept)*/
+        WHEN '900000000000546006' THEN 99 /*Inactive value (foundation metadata concept)*/
+        WHEN '900000000000545005' THEN 99 /*Active value (foundation metadata concept)*/
         WHEN '900000000000458008' THEN 99 /*Attribute description (foundation metadata concept)*/
         WHEN '900000000000459000' THEN 99 /*Attribute type (foundation metadata concept)*/
-          WHEN '900000000000460005' THEN 99 /*Component type (foundation metadata concept)*/
-            WHEN '900000000000461009' THEN 99 /*Concept type component (foundation metadata concept)*/
-            WHEN '900000000000462002' THEN 99 /*Description type component (foundation metadata concept)*/
-            WHEN '900000000000463007' THEN 99 /*Relationship type component (foundation metadata concept)*/
-            WHEN '900000000000464001' THEN 99 /*Reference set member type component (foundation metadata concept)*/
-          WHEN '900000000000465000' THEN 99 /*String (foundation metadata concept)*/
-            WHEN '900000000000466004' THEN 99 /*Text (foundation metadata concept)*/
-            WHEN '900000000000469006' THEN 99 /*Uniform resource locator (foundation metadata concept)*/
-            WHEN '900000000000474003' THEN 99 /*Universally Unique Identifier (foundation metadata concept)*/
-            WHEN '900000000000475002' THEN 99 /*Time (foundation metadata concept)*/
-          WHEN '900000000000476001' THEN 99 /*Integer (foundation metadata concept)*/
-            WHEN '900000000000477005' THEN 99 /*Signed integer (foundation metadata concept)*/
-            WHEN '900000000000478000' THEN 99 /*Unsigned integer (foundation metadata concept)*/
+        WHEN '900000000000460005' THEN 99 /*Component type (foundation metadata concept)*/
+        WHEN '900000000000461009' THEN 99 /*Concept type component (foundation metadata concept)*/
+        WHEN '900000000000462002' THEN 99 /*Description type component (foundation metadata concept)*/
+        WHEN '900000000000463007' THEN 99 /*Relationship type component (foundation metadata concept)*/
+        WHEN '900000000000464001' THEN 99 /*Reference set member type component (foundation metadata concept)*/
+        WHEN '900000000000465000' THEN 99 /*String (foundation metadata concept)*/
+        WHEN '900000000000466004' THEN 99 /*Text (foundation metadata concept)*/
+        WHEN '900000000000469006' THEN 99 /*Uniform resource locator (foundation metadata concept)*/
+        WHEN '900000000000474003' THEN 99 /*Universally Unique Identifier (foundation metadata concept)*/
+        WHEN '900000000000475002' THEN 99 /*Time (foundation metadata concept)*/
+        WHEN '900000000000476001' THEN 99 /*Integer (foundation metadata concept)*/
+        WHEN '900000000000477005' THEN 99 /*Signed integer (foundation metadata concept)*/
+        WHEN '900000000000478000' THEN 99 /*Unsigned integer (foundation metadata concept)*/
         WHEN '900000000000479008' THEN 99 /*Attribute order (foundation metadata concept)*/
         WHEN '900000000000499002' THEN 99 /*Scheme value (foundation metadata concept)*/
         WHEN '900000000000500006' THEN 99 /*Map source concept (foundation metadata concept)*/
@@ -142,25 +142,24 @@ SET MagicNumber = (SELECT CASE ID
         WHEN '900000000000505001' THEN 99 /*Map target (foundation metadata concept)*/
         WHEN '900000000000510002' THEN 99 /*Description in dialect (foundation metadata concept)*/
         WHEN '900000000000511003' THEN 99 /*Acceptability (foundation metadata concept)*/
-          WHEN '900000000000548007' THEN 1 /*Preferred (foundation metadata concept)*/
-          WHEN '900000000000549004' THEN 2 /*Acceptable (foundation metadata concept)*/
+        WHEN '900000000000548007' THEN 1 /*Preferred (foundation metadata concept)*/
+        WHEN '900000000000549004' THEN 2 /*Acceptable (foundation metadata concept)*/
         WHEN '900000000000514006' THEN 99 /*Generated reference set (foundation metadata concept)*/
         WHEN '900000000000515007' THEN 99 /*Query (foundation metadata concept)*/
         WHEN '900000000000518009' THEN 99 /*Annotated component (foundation metadata concept)*/
         WHEN '900000000000519001' THEN 99 /*Annotation (foundation metadata concept)*/
-          WHEN '900000000000520007' THEN 99 /*Image (foundation metadata concept)*/
+        WHEN '900000000000520007' THEN 99 /*Image (foundation metadata concept)*/
         WHEN '900000000000532006' THEN 99 /*Association source component (foundation metadata concept)*/
         WHEN '900000000000533001' THEN 99 /*Association target component (foundation metadata concept)*/
         WHEN '900000000000535008' THEN 99 /*Dependency target (foundation metadata concept)*/
         WHEN '900000000000536009' THEN 99 /*Source effective time (foundation metadata concept)*/
         WHEN '900000000000537000' THEN 99 /*Target effective time (foundation metadata concept)*/
         WHEN '900000000000539002' THEN 99 /*Description format (foundation metadata concept)*/
-          WHEN '900000000000540000' THEN 99 /*Plain text (foundation metadata concept)*/
-          WHEN '900000000000541001' THEN 99 /*Limited HyperText Markup Language (foundation metadata concept)*/
-          WHEN '900000000000542008' THEN 99 /*Extensible HyperText Markup Language (foundation metadata concept)*/
-          WHEN '900000000000543003' THEN 99 /*Darwin Information Typing Architecture (foundation metadata concept)*/
+        WHEN '900000000000540000' THEN 99 /*Plain text (foundation metadata concept)*/
+        WHEN '900000000000541001' THEN 99 /*Limited HyperText Markup Language (foundation metadata concept)*/
+        WHEN '900000000000542008' THEN 99 /*Extensible HyperText Markup Language (foundation metadata concept)*/
+        WHEN '900000000000543003' THEN 99 /*Darwin Information Typing Architecture (foundation metadata concept)*/
         WHEN '900000000000544009' THEN 99 /*Description length (foundation metadata concept)*/
-
 
         ELSE '99'
 END);
@@ -708,7 +707,8 @@ INSERT INTO IMPORTTIME_RF2 SET Event = '    END HISTORICAL RELATIONSHIP ROW REST
 INSERT INTO IMPORTTIME_RF2 SET Event = '  END RECONSTRUCT SCT1_RELATIONSHIPS', DTSTAMP = '', TMSTAMP=CURRENT_TIME;
 
 INSERT INTO IMPORTTIME_RF2 SET Event = '  START RECONSTRUCT SCT1_SUBSETS', DTSTAMP = '', TMSTAMP=CURRENT_TIME;
-
+/*
+Simple Type Refset (VTM & VMP) are currently empty
 INSERT INTO rf21_subsetlist SELECT DISTINCT 
 	m.OriginalSubsetID AS SubsetID, 
 	m.OriginalSubsetID AS OriginalSubsetID, 
@@ -726,6 +726,8 @@ INSERT INTO rf21_subsets SELECT m.OriginalSubsetId AS SubsetId, referencedCompon
 FROM rf2_refset s 
 	INNER JOIN rf2_subset2refset m ON s.refsetId = m.refsetId
 	INNER JOIN rf21_rel r ON s.refsetId = r.CONCEPTID1 AND r.RELATIONSHIPTYPE = '116680003' AND r.CONCEPTID2 = '446609009'; #Simple type reference set 
+*/
+
 
 INSERT INTO rf21_subsetlist SELECT DISTINCT 
 	m.OriginalSubsetID AS SubsetID, 
@@ -739,6 +741,7 @@ INSERT INTO rf21_subsetlist SELECT DISTINCT
 FROM rf2_crefset s 
 	INNER JOIN rf2_subset2refset m ON s.refsetId = m.refsetId
 	INNER JOIN rf21_rel r ON s.refsetId = r.CONCEPTID1 AND r.RELATIONSHIPTYPE = '116680003' AND r.CONCEPTID2 = '900000000000507009'; #English [International Organization for Standardization 639-1 code en] language reference set  
+	-- This matches both types of English Lang refset ie US and GB
 
 INSERT INTO rf21_subsets SELECT m.OriginalSubsetId AS SubsetId, referencedComponentId AS MemberID, IF(linkedComponentId = '900000000000549004',2,1) AS MemberStatus, 0 AS LinkedID 
 FROM rf2_crefset s 
