@@ -47,6 +47,7 @@ public class GlobalUtils {
 						Path p = Paths.get(ze.getName());
 						String extractedFileName = p.getFileName().toString();
 						if (matchStr == null || extractedFileName.contains(matchStr)) {
+							debug("Extracting " + extractedFileName);
 							File extractedFile = new File(targetDir, extractedFileName);
 							OutputStream out = new FileOutputStream(extractedFile);
 							IOUtils.copy(zis, out);

@@ -27,7 +27,7 @@ public class DBManagerTest {
 
 	@After
 	public void after() throws IOException, RF1ConversionException {
-		db.shutDown();
+		db.shutDown(true);
 		FileUtils.deleteDirectory(dbLocation);
 	}
 

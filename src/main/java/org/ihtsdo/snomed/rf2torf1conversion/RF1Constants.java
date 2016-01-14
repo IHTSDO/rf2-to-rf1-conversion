@@ -185,6 +185,12 @@ public class RF1Constants {
 		return sctid.equals(ENTIRE_TERM_CS) ? (byte) 1 : (byte) 0;
 	}
 	
+	public static byte translateRefinability(String characteristicType) {
+		// Qualifying Relationships (1) are Mandatory Refinable (2)
+		// everything else is no refinable (0)
+		return characteristicType.equals(1) ? (byte) 2 : (byte) 0;
+	}
+
 	public static byte translateCharacteristic(String sctid) {
 		switch (sctid) {
 			case STATED: return 1;

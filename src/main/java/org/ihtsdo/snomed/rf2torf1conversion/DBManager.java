@@ -8,6 +8,7 @@ import java.net.URL;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
 
@@ -35,7 +36,7 @@ public class DBManager {
 	private void getDBConnection(File dbLocation) throws RF1ConversionException {
 		try {
 			Class.forName(DB_DRIVER);
-			String dbConnectionStr = "jdbc:h2:" + dbLocation.getPath();
+			String dbConnectionStr = "jdbc:h2:" + dbLocation.getPath() + File.separator + "rf2-to-rf1-conversion";
 			dbConn = DriverManager.getConnection(dbConnectionStr, DB_USER, DB_PASSWORD);
 		} catch (ClassNotFoundException | SQLException e) {
 			throw new RF1ConversionException("Failed to initialise in memory database", e);
@@ -49,11 +50,10 @@ public class DBManager {
 			for (String sql : sqlStatements) {
 				sql = sql.trim();
 				if (sql.length() > 0) {
-					debug("Running: " + sql);
-					dbConn.createStatement().execute(sql);
+					executeSql(sql);
 				}
 			}
-		} catch (IOException | SQLException e) {
+		} catch (IOException | RF1ConversionException e) {
 			throw new RF1ConversionException("Failed to execute resource " + resourceName, e);
 		}
 	}
@@ -75,17 +75,45 @@ public class DBManager {
 			debug("Loading data into " + tableName + " from " + file.getName());
 			// Field separator set to ASCII 21 = NAK to ensure double quotes (the default separator) are ignored
 			String sql = "INSERT INTO " + tableName + " SELECT * FROM CSVREAD('" + file.getPath() + "', null, 'UTF-8', chr(9), chr(21));";
-			dbConn.createStatement().execute(sql);
-		} catch (SQLException e) {
+			executeSql(sql);
+		} catch (RF1ConversionException e) {
 			throw new RF1ConversionException("Failed to load data into " + tableName, e);
 		}
 	}
 
-	public void shutDown() throws RF1ConversionException {
+	public void executeSql(String sql) throws RF1ConversionException {
 		try {
+			debug("Running: " + sql);
+			Statement stmt = dbConn.createStatement();
+			stmt.execute(sql);
+			if (sql.contains("INSERT") || sql.contains("UPDATE")) {
+				debug("Rows updated: " + stmt.getUpdateCount());
+			}
+		} catch (SQLException e) {
+			throw new RF1ConversionException("Failed to execute SQL Statement", e);
+		}
+	}
+
+	public void shutDown(boolean deleteFiles) throws RF1ConversionException {
+		try {
+			if (deleteFiles) {
+				dbConn.createStatement().execute("DROP ALL OBJECTS DELETE FILES");
+			}
 			dbConn.createStatement().execute("SHUTDOWN");
 		} catch (SQLException e) {
 			throw new RF1ConversionException("Failed to shutdown database");
+		}
+	}
+
+	public void export(File outputFile, String selectionSql) throws RF1ConversionException {
+		try {
+			debug("Exporting data into " + outputFile.getName());
+			// Field separator set to ASCII 21 = NAK to ensure double quotes (the default separator) are ignored
+			String sql = "CALL CSVWRITE('" + outputFile.getPath() + "', '" + selectionSql + "',"
+					+ "'charset=UTF-8 fieldSeparator=' || CHAR(9));";
+			dbConn.createStatement().execute(sql);
+		} catch (SQLException e) {
+			throw new RF1ConversionException("Failed to export data to file " + outputFile.getName(), e);
 		}
 	}
 }
