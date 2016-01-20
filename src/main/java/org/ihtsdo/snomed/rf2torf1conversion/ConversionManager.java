@@ -48,13 +48,13 @@ public class ConversionManager {
 		exportMap.put("der1_SubsetMembers_en-GB_INT_DATE.txt", "select s.* from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.subsetid = sl.subsetid AND sl.languageCode in (''en'',''en-GB'')");
 		exportMap.put("der1_SubsetMembers_en-US_INT_DATE.txt", "select s.* from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.subsetid = sl.subsetid AND sl.languageCode in (''en'',''en-US'')");
 		exportMap.put("der1_Subsets_en-GB_INT_DATE.txt", "select sl.* from rf21_SUBSETLIST sl where languagecode like ''%GB%''");
-		exportMap.put("der1_Subsets_en-GB_INT_DATE.txt", "select sl.* from rf21_SUBSETLIST sl where languagecode like ''%GB%''");
+		exportMap.put("der1_Subsets_en-US_INT_DATE.txt", "select sl.* from rf21_SUBSETLIST sl where languagecode like ''%US%''");
 		// exportMap.put("rf21_XMAPLIST");
 		// exportMap.put("rf21_XMAPS");
 		// exportMap.put("rf21_XMAPTARGET");
 		exportMap.put("sct1_Concepts_Core_INT_DATE.txt", "select * from rf21_concept");
 		exportMap.put("sct1_Relationships_Core_INT_DATE.txt", "select * from rf21_rel");
-		exportMap.put("sct1_Descriptions_en_INT_DATE.txt", "select * from rf21_term");
+		exportMap.put("sct1_Descriptions_en_INT_DATE.txt", "select DESCRIPTIONID, DESCRIPTIONSTATUS, CONCEPTID, TERM, INITIALCAPITALSTATUS, US_DESC_TYPE as DESCRIPTIONTYPE, LANGUAGECODE from rf21_term");
 
 	}
 

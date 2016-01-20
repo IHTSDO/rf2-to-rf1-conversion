@@ -1,14 +1,14 @@
 
 	CREATE TABLE rf2_concept (
 		id BIGINT NOT NULL,
-		effectiveTime VARBINARY(14) NOT NULL,
+		effectiveTime BIGINT NOT NULL,
 		active BOOLEAN NOT NULL,
 		moduleId BIGINT NOT NULL,
 		definitionStatusId BIGINT NOT NULL);
 
 	CREATE TABLE rf2_term (
 		id BIGINT NOT NULL,
-		effectiveTime VARBINARY(14) NOT NULL,
+		effectiveTime BIGINT NOT NULL,
 		active BOOLEAN NOT NULL,
 		moduleId BIGINT NOT NULL,
 		conceptId BIGINT NOT NULL,
@@ -19,7 +19,7 @@
 
 	CREATE TABLE rf2_def (
 		id BIGINT NOT NULL,
-		effectiveTime VARBINARY(14) NOT NULL,
+		effectiveTime BIGINT NOT NULL,
 		active BOOLEAN NOT NULL,
 		moduleId BIGINT NOT NULL,
 		conceptId BIGINT NOT NULL,
@@ -30,7 +30,7 @@
 
 	CREATE TABLE rf2_rel (
 		id BIGINT NOT NULL,
-		effectiveTime VARBINARY(14) NOT NULL,
+		effectiveTime BIGINT NOT NULL,
 		active BOOLEAN NOT NULL,
 		moduleId BIGINT NOT NULL,
 		sourceId BIGINT NOT NULL,
@@ -43,7 +43,7 @@
 	CREATE TABLE rf2_identifier (
 		identifierSchemeId BIGINT NOT NULL,
 		alternateIdentifier VARCHAR(100) NOT NULL,
-		effectiveTime VARBINARY(14) NOT NULL,
+		effectiveTime BIGINT NOT NULL,
 		active BOOLEAN NOT NULL,
 		moduleId BIGINT NOT NULL,
 		referencedComponentId BIGINT NOT NULL);
@@ -51,12 +51,12 @@
 	CREATE TABLE rf2_transitiveclosure (
 		subtypeId BIGINT NOT NULL,
 		supertypeId BIGINT NOT NULL,
-		effectiveTime VARBINARY(14) NOT NULL,
+		effectiveTime BIGINT NOT NULL,
 		active BOOLEAN NOT NULL);
 
 	CREATE TABLE rf2_refset (
 		id VARCHAR(38) NOT NULL,
-		effectiveTime VARBINARY(14) NOT NULL,
+		effectiveTime BIGINT NOT NULL,
 		active BOOLEAN NOT NULL,
 		moduleId BIGINT NOT NULL,
 		refSetId BIGINT NOT NULL,	
@@ -64,7 +64,7 @@
 
 	CREATE TABLE rf2_crefset (
 		id VARCHAR(38) NOT NULL,
-		effectiveTime VARBINARY(14) NOT NULL,
+		effectiveTime BIGINT NOT NULL,
 		active BOOLEAN NOT NULL,
 		moduleId BIGINT NOT NULL,
 		refSetId BIGINT NOT NULL,	
@@ -73,7 +73,7 @@
 
 	CREATE TABLE rf2_icrefset (
 		id VARCHAR(38) NOT NULL,
-		effectiveTime VARBINARY(14) NOT NULL,
+		effectiveTime BIGINT NOT NULL,
 		active BOOLEAN NOT NULL,
 		moduleId BIGINT NOT NULL,
 		refSetId BIGINT NOT NULL,	
@@ -83,7 +83,7 @@
 
 	CREATE TABLE rf2_srefset (
 		id VARCHAR(38) NOT NULL,
-		effectiveTime VARBINARY(14) NOT NULL,
+		effectiveTime BIGINT NOT NULL,
 		active BOOLEAN NOT NULL,
 		moduleId BIGINT NOT NULL,
 		refSetId BIGINT NOT NULL,	
@@ -92,7 +92,7 @@
 
 	CREATE TABLE rf2_ccirefset (
 		id VARCHAR(38) NOT NULL,
-		effectiveTime VARBINARY(14) NOT NULL,
+		effectiveTime BIGINT NOT NULL,
 		active BOOLEAN NOT NULL,
 		moduleId BIGINT NOT NULL,
 		refSetId BIGINT NOT NULL,	
@@ -103,7 +103,7 @@
 
 	CREATE TABLE rf2_cirefset (
 		id VARCHAR(38) NOT NULL,
-		effectiveTime VARBINARY(14) NOT NULL,
+		effectiveTime BIGINT NOT NULL,
 		active BOOLEAN NOT NULL,
 		moduleId BIGINT NOT NULL,
 		refSetId BIGINT NOT NULL,	
@@ -113,7 +113,7 @@
 
 	CREATE TABLE rf2_ssrefset (
 		id VARCHAR(38) NOT NULL,
-		effectiveTime VARBINARY(14) NOT NULL,
+		effectiveTime BIGINT NOT NULL,
 		active BOOLEAN NOT NULL,
 		moduleId BIGINT NOT NULL,
 		refSetId BIGINT NOT NULL,	
@@ -123,45 +123,45 @@
 
 	CREATE TABLE rf2_iissscrefset (
 		id VARCHAR(38) NOT NULL,
-		effectiveTime VARBINARY(14) NOT NULL,
+		effectiveTime BIGINT NOT NULL,
 		active BOOLEAN NOT NULL,
 		moduleId BIGINT NOT NULL,
 		refSetId BIGINT NOT NULL,	
 		referencedComponentId BIGINT NOT NULL,
 		mapGroup TINYINT NOT NULL,
 		mapPriority TINYINT NOT NULL,
-		mapRule VARCHAR(255)  NOT NULL,
-		mapAdvice VARCHAR(255)  NOT NULL,
+		mapRule VARCHAR(255),
+		mapAdvice VARCHAR(255),
 		mapTarget VARCHAR(255) ,
 		corelationId BIGINT NOT NULL);
 
 	CREATE TABLE rf2_iisssccrefset (
 		id VARCHAR(38) NOT NULL,
-		effectiveTime VARBINARY(14) NOT NULL,
+		effectiveTime BIGINT NOT NULL,
 		active BOOLEAN NOT NULL,
 		moduleId BIGINT NOT NULL,
 		refSetId BIGINT NOT NULL,	
 		referencedComponentId BIGINT NOT NULL,
 		mapGroup TINYINT NOT NULL,
 		mapPriority TINYINT NOT NULL,
-		mapRule VARCHAR(255)  NOT NULL,
-		mapAdvice VARCHAR(512)  NOT NULL,
+		mapRule VARCHAR(255),
+		mapAdvice VARCHAR(512),
 		mapTarget VARCHAR(255) ,
 		corelationId BIGINT NOT NULL,
 		mapCategoryId BIGINT NOT NULL);
 
 	CREATE TABLE rf2_iissscirefset (
 		id VARCHAR(38) NOT NULL,
-		effectiveTime VARBINARY(14) NOT NULL,
+		effectiveTime BIGINT NOT NULL,
 		active BOOLEAN NOT NULL,
 		moduleId BIGINT NOT NULL,
 		refSetId BIGINT NOT NULL,	
 		referencedComponentId BIGINT NOT NULL,
 		mapGroup TINYINT NOT NULL,
 		mapPriority INT NOT NULL,
-		mapRule VARCHAR(255)  NOT NULL,
-		mapAdvice VARCHAR(255)  NOT NULL,
-		mapTarget VARCHAR(255) ,
+		mapRule VARCHAR(255),
+		mapAdvice VARCHAR(255),
+		mapTarget VARCHAR(255),
 		corelationId BIGINT NOT NULL,
 		mapBlock TINYINT NOT NULL);
 

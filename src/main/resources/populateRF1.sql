@@ -15,112 +15,113 @@ CREATE ALIAS refinabilityFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Consta
 
 DROP TABLE IF EXISTS rf21_CONCEPT;
 CREATE TABLE rf21_CONCEPT (
-	CONCEPTID	         VARCHAR (18) NOT NULL,
-	CONCEPTSTATUS        TINYINT (2) UNSIGNED NOT NULL,
-	FULLYSPECIFIEDNAME   VARCHAR (255)  NOT NULL,
-	CTV3ID               BINARY (5) NOT NULL,
-    SNOMEDID             VARBINARY (8) NOT NULL,
-    ISPRIMITIVE          TINYINT (1) UNSIGNED NOT NULL,
-    SOURCE               BINARY (4) NOT NULL);
+	CONCEPTID			BIGINT NOT NULL,
+	CONCEPTSTATUS		TINYINT (2) UNSIGNED NOT NULL,
+	FULLYSPECIFIEDNAME	VARCHAR (255), --	NOT NULL,
+	CTV3ID				VARCHAR (8) NOT NULL,
+	SNOMEDID			VARCHAR (8), -- NOT NULL
+	ISPRIMITIVE			TINYINT (1) UNSIGNED NOT NULL,
+	SOURCE				VARCHAR (18) NOT NULL);
 
 /* Table: TERM : Table of unique Terms and their IDs*/
 DROP TABLE IF EXISTS rf21_TERM;
 CREATE TABLE rf21_TERM (
-	DESCRIPTIONID		 VARCHAR (18) NOT NULL,
-	DESCRIPTIONSTATUS		TINYINT (2) UNSIGNED NOT NULL,
-	CONCEPTID				VARCHAR (18) NOT NULL,
-	TERM					VARCHAR (255)  NOT NULL,
-	INITIALCAPITALSTATUS	TINYINT (1) UNSIGNED NOT NULL,
+	DESCRIPTIONID		 BIGINT NOT NULL,
+	DESCRIPTIONSTATUS		TINYINT (2) UNSIGNED, -- NOT NULL
+	CONCEPTID				BIGINT NOT NULL,
+	TERM					VARCHAR (255)	NOT NULL,
+	INITIALCAPITALSTATUS	TINYINT (1) UNSIGNED, -- NOT NULL
 	US_DESC_TYPE			TINYINT (1) UNSIGNED NOT NULL,
 	GB_DESC_TYPE			TINYINT (1) UNSIGNED NOT NULL,
 	LANGUAGECODE			VARCHAR (5) NOT NULL,
-	SOURCE					BINARY(4) NOT NULL);
+	SOURCE					VARCHAR (18) NOT NULL);
 
 /* Table: DEF : Table of text definitions */
 DROP TABLE IF EXISTS rf21_DEF;
 CREATE TABLE rf21_DEF (
- CONCEPTID             VARCHAR (18) NOT NULL,
- SNOMEDID              VARBINARY (8) NOT NULL,
- FULLYSPECIFIEDNAME    VARCHAR (255)  NOT NULL,
- DEFINITION            VARCHAR (450)  NOT NULL);
+ CONCEPTID				BIGINT NOT NULL,
+ SNOMEDID				VARCHAR (8), -- NOT NULL
+ FULLYSPECIFIEDNAME		VARCHAR (255), --	NOT NULL,
+ DEFINITION				VARCHAR (2048)	NOT NULL);
 
 /* Table: REL : Templates*/
 DROP TABLE IF EXISTS rf21_REL;
 CREATE TABLE rf21_REL (
-	RELATIONSHIPID		VARCHAR (18) NOT NULL,
-	CONCEPTID1			VARCHAR (18) NOT NULL,
-	RELATIONSHIPTYPE	VARCHAR (18) NOT NULL,
-	CONCEPTID2			VARCHAR (18) NOT NULL,
+	RELATIONSHIPID		BIGINT NOT NULL,
+	CONCEPTID1			BIGINT NOT NULL,
+	RELATIONSHIPTYPE	BIGINT NOT NULL,
+	CONCEPTID2			BIGINT NOT NULL,
 	CHARACTERISTICTYPE	TINYINT (1) UNSIGNED NOT NULL,
 	REFINABILITY		TINYINT (1) UNSIGNED NOT NULL,
 	RELATIONSHIPGROUP	TINYINT (2) UNSIGNED NOT NULL,
-	SOURCE				BINARY (4) NOT NULL);
+	SOURCE				VARCHAR (18) NOT NULL);
 
 DROP TABLE IF EXISTS rf21_SUBSETLIST;
 CREATE TABLE rf21_SUBSETLIST (
-  SubsetId         VARCHAR (18) NOT NULL,
-  SubsetOriginalID VARCHAR (18) NOT NULL,
-  SubsetVersion    VARBINARY(4) NOT NULL,
-  SubsetName       VARCHAR(255)  NOT NULL,
-  SubsetType       TINYINT (1) UNSIGNED NOT NULL,
-  LanguageCode     VARCHAR(5),
-  SubsetRealmID    VARBINARY (10) NOT NULL,
-  ContextID        TINYINT (1) UNSIGNED NOT NULL);
+	SubsetId			BIGINT NOT NULL,
+	SubsetOriginalID	BIGINT NOT NULL,
+	SubsetVersion		VARBINARY(4) NOT NULL,
+	SubsetName			VARCHAR(255)	NOT NULL,
+	SubsetType			TINYINT (1) UNSIGNED NOT NULL,
+	LanguageCode		VARCHAR(5),
+	SubsetRealmID		VARBINARY (10) NOT NULL,
+	ContextID			TINYINT (1) UNSIGNED NOT NULL);
 
 DROP TABLE IF EXISTS rf21_SUBSETS;
 CREATE TABLE rf21_SUBSETS (
-  SubsetId     VARCHAR (18) NOT NULL,
-  MemberID     VARCHAR (18) NOT NULL,
-  MemberStatus TINYINT (1) UNSIGNED NOT NULL,
-  LinkedID     VARCHAR(18) );
+	SubsetId	 BIGINT NOT NULL,
+	MemberID	 BIGINT NOT NULL,
+	MemberStatus TINYINT (1) UNSIGNED NOT NULL,
+	LinkedID	 VARCHAR(18) );
 
 DROP TABLE IF EXISTS rf21_XMAPLIST;
 CREATE TABLE rf21_XMAPLIST (
-  MapSetId             VARCHAR (18) NOT NULL,
-  MapSetName           VARCHAR (255)  NOT NULL,
-  MapSetType           BINARY (1) NOT NULL,
-  MapSetSchemeID       VARBINARY (64) NOT NULL,
-  MapSetSchemeName     VARCHAR (255)  NOT NULL,
-  MapSetSchemeVersion  VARBINARY(10) NOT NULL,
-  MapSetRealmID        VARCHAR (18) NOT NULL,
-  MapSetSeparator      BINARY (1) NOT NULL,
-  MapSetRuleType       VARBINARY (2) NOT NULL);
+	MapSetId			BIGINT NOT NULL,
+	MapSetName			VARCHAR (255)	NOT NULL,
+	MapSetType			BINARY (1) NOT NULL,
+	MapSetSchemeID		VARBINARY (64) NOT NULL,
+	MapSetSchemeName	VARCHAR (255)	NOT NULL,
+	MapSetSchemeVersion	VARBINARY(10) NOT NULL,
+	MapSetRealmID		BIGINT NOT NULL,
+	MapSetSeparator		BINARY (1) NOT NULL,
+	MapSetRuleType		VARBINARY (2) NOT NULL);
 
 DROP TABLE IF EXISTS rf21_XMAPS;
 CREATE TABLE rf21_XMAPS (
-  MapSetID       VARCHAR (18) NOT NULL,
-  MapConceptID   VARCHAR (18) NOT NULL,
-  MapOption      INTEGER UNSIGNED,
-  MapPriority    TINYINT (1) UNSIGNED,
-  MapTargetID    VARCHAR (18) NOT NULL,
-  MapRule        VARCHAR(255)  NOT NULL,
-  MapAdvice      VARCHAR(255)  NOT NULL);
+	MapSetID		BIGINT NOT NULL,
+	MapConceptID	BIGINT NOT NULL,
+	MapOption		INTEGER UNSIGNED,
+	MapPriority		TINYINT (1) UNSIGNED,
+	MapTargetID		BIGINT NOT NULL,
+	MapRule			VARCHAR(255)	NOT NULL,
+	MapAdvice		VARCHAR(255)	NOT NULL);
 
 DROP TABLE IF EXISTS rf21_XMAPTARGET;
 CREATE TABLE rf21_XMAPTARGET (
-  TargetID       VARCHAR (18) NOT NULL,
-  TargetSchemeID VARCHAR (64)  NOT NULL,
-  TargetCodes    VARCHAR(255) ,
-  TargetRule     VARCHAR(255)  NOT NULL,
-  TargetAdvice   VARCHAR(255)  NOT NULL);
+	TargetID		BIGINT NOT NULL,
+	TargetSchemeID 	VARCHAR (64)	NOT NULL,
+	TargetCodes		VARCHAR(255) ,
+	TargetRule	 	VARCHAR(255)	NOT NULL,
+	TargetAdvice	VARCHAR(255)	NOT NULL);
 
 DROP TABLE IF EXISTS rf21_REFERENCE;
 
-CREATE TABLE rf21_REFERENCE
-  (COMPONENTID   VARCHAR (18) NOT NULL,
-  REFERENCETYPE  TINYINT (1) NOT NULL,
-  REFERENCEDID   VARCHAR (18) NOT NULL,
-  SOURCE         BINARY (4) NOT NULL);
+CREATE TABLE rf21_REFERENCE (
+	COMPONENTID		BIGINT NOT NULL,
+	REFERENCETYPE	TINYINT (1) NOT NULL,
+	REFERENCEDID	BIGINT NOT NULL,
+	SOURCE			VARCHAR (18) NOT NULL);
 
 DROP TABLE IF EXISTS rf21_COMPONENTHISTORY;
 
-CREATE TABLE rf21_COMPONENTHISTORY
-  (COMPONENTID     VARCHAR (18) NOT NULL,
-   RELEASEVERSION  BINARY (8) NOT NULL,
-   CHANGETYPE      TINYINT (1) NOT NULL,
-   STAT            TINYINT (1) NOT NULL,
-   REASON          VARCHAR(255)  NOT NULL,
-   SOURCE          BINARY(4) NOT NULL);
+CREATE TABLE rf21_COMPONENTHISTORY (
+	COMPONENTID		BIGINT NOT NULL,
+	RELEASEVERSION	BIGINT NOT NULL,
+	CHANGETYPE		TINYINT (1) NOT NULL,
+	STAT			TINYINT (1) NOT NULL,
+	REASON			VARCHAR(255)	NOT NULL,
+	SOURCE			VARCHAR (18) NOT NULL);
+	
 
 INSERT INTO rf21_concept
 SELECT DISTINCT
@@ -137,6 +138,10 @@ SET @FullySpecifiedName = '900000000000003001';
 SET @Definition = '900000000000550004';
 SET @EntireTermCaseSensitive = '900000000000017005';
 
+SELECT typeid, count(*)
+from rf2_term
+group by typeid; 
+
 INSERT INTO rf21_term
 SELECT
   id AS DESCRIPTIONID,
@@ -144,8 +149,8 @@ SELECT
   conceptId AS CONCEPTID,
   term AS TERM,
   capitalStatusFor(caseSignificanceId) AS INITIALCAPITALSTATUS,
-  descTypeFor(typeID) AS US_DESC_TYPE, -- assigns all FSNs but labels all other terms as 'synonyms'
-  descTypeFor(typeID) AS GB_DESC_TYPE, -- assigns all FSNs but labels all other terms as 'synonyms'
+  descTypeFor(typeID) AS US_DESC_TYPE, -- assigns all FSNs (3) but labels all other terms as 'synonyms'
+  descTypeFor(typeID) AS GB_DESC_TYPE, -- assigns all FSNs (3) but labels all other terms as 'synonyms'
   languageCode AS LANGUAGECODE,
   moduleSourceFor(moduleId) AS SOURCE
 FROM rf2_term;
@@ -204,54 +209,57 @@ where c.CONCEPTID in (
 	and s3.active = 1
 	and s3.referencedComponentId = c.CONCEPTID);
 
+SELECT count(*) as rowCount from rf2_srefset s;
+
+SELECT * from rf2_srefset s where s.linkedString is null;
+
+SELECT c.* from rf21_concept c LEFT JOIN rf2_srefset s
+ON c.conceptid = s.referencedComponentId
+AND s.refSetId = '900000000000497000'
+WHERE s.referencedComponentId is null;
+
+-- Currently missing legacy values for GMDN Reference Set Concept.  Merge in if required.
+MERGE INTO rf2_srefset (id, effectiveTime, active, moduleId, refSetId, referencedComponentId, linkedString)
+KEY (referencedComponentId, refsetId)
+Values ('DUMMY', '00000000', 1, 900000000000207008, 900000000000497000, 467614008, 'XUozI' );
+
+MERGE INTO rf2_srefset (id, effectiveTime, active, moduleId, refSetId, referencedComponentId, linkedString)
+KEY (referencedComponentId, refsetId)
+Values ('DUMMY', '00000000', 1, 900000000000207008, 900000000000498005, 467614008, 'R-FD64C' );
+	
+	
+ -- CTV3
 UPDATE rf21_concept c
-SET c.CTV3ID = (select s.linkedString from rf2_srefset s
+SET c.CTV3ID = (
+select s.linkedString from rf2_srefset s
 where c.conceptid = s.referencedComponentId
-and s.refSetId ='900000000000497000'
-) WHERE c.conceptid in (
-select s2.referencedComponentId 
-from rf2_srefset s2 
-where s2.refSetId ='900000000000497000');  -- CTV3
+and s.refSetId = '900000000000497000' );
 
-
--- UPDATE rf21_concept C INNER JOIN rf2_srefset s ON c.CONCEPTID = s.referencedComponentId
--- SET c.SNOMEDID = s.linkedString WHERE s.refSetId ='900000000000498005' /* SNOMED RT identifier simple map (foundation metadata concept) */
+-- SNOMED RT ID
 UPDATE rf21_concept c
 SET c.SNOMEDID = (select s.linkedString from rf2_srefset s
 where c.conceptid = s.referencedComponentId
 and s.refSetId ='900000000000498005'
-) WHERE c.conceptid in (
-select s2.referencedComponentId 
-from rf2_srefset s2 
-where s2.refSetId ='900000000000498005');  -- SNOMED RT ID
+);
 
--- UPDATE rf21_term t INNER JOIN rf2_crefset s ON t.DESCRIPTIONID = s.referencedComponentId
--- SET t.DESCRIPTIONSTATUS = magicNumberFor(linkedComponentId) WHERE s.refSetId ='900000000000490003' AND s.active = 1 /* Description inactivation indicator attribute value reference set (foundation metadata concept) */
+SELECT DESCRIPTIONSTATUS, count(*) from rf21_term group by DESCRIPTIONSTATUS;
+
+--Where term is has inactivation reason, set the description status
 UPDATE rf21_term t
-set t.DESCRIPTIONSTATUS = (
-	select magicNumberFor(s.linkedComponentId) 
+SET t.DESCRIPTIONSTATUS = COALESCE (
+	(select magicNumberFor(s.linkedComponentId)
 	from rf2_crefset s
 	where s.referencedComponentId = t.descriptionid
 	and s.refSetId ='900000000000490003' 
-	AND s.active = 1)
-WHERE t.descriptionid in (
-	select s2.referencedComponentId
-	from  rf2_crefset s2
-	where s2.refSetId ='900000000000490003' 
-	AND s2.active = 1);
+	AND s.active = 1),t.descriptionstatus); 
 
--- UPDATE rf21_concept c INNER JOIN rf21_term t 
--- ON c.CONCEPTID = t.CONCEPTID SET c.FULLYSPECIFIEDNAME = t.TERM 
--- WHERE t.DESCRIPTIONTYPE = 3 AND t.DESCRIPTIONSTATUS IN (0,6,8,11);
+SELECT DESCRIPTIONSTATUS, count(*) from rf21_term group by DESCRIPTIONSTATUS;
+
 UPDATE rf21_concept c
 SET c.FULLYSPECIFIEDNAME = ( 
 	select t.term from rf21_term t
 	where t.conceptid = c.conceptid
 	and t.US_DESC_TYPE = 3 
-	and t.DESCRIPTIONSTATUS IN (0,6,8,11))
-WHERE c.conceptid IN (
-	select t.conceptid from rf21_term t
-	where t.US_DESC_TYPE = 3 
 	and t.DESCRIPTIONSTATUS IN (0,6,8,11));
 
 SET @USRefSet = '900000000000509007'; /* United States of America English language reference set  */
@@ -285,6 +293,10 @@ WHERE EXISTS (
 	AND gb.referencedComponentId is null
 );
 
+SELECT t.LANGUAGECODE, count(*)
+from rf21_term t
+group by t.LANGUAGECODE;
+
 SET @Acceptable = '900000000000549004';
 SET @Preferred = '900000000000548007';
 SET @USRefSet = '900000000000509007'; /* United States of America English language reference set  */
@@ -297,7 +309,8 @@ WHERE EXISTS (
 	select 1 from rf2_crefset us
 	where us.refsetID = @USRefSet
 	and t.DESCRIPTIONID = us.referencedComponentId
-	and us.linkedComponentId = @Preferred );
+	and us.linkedComponentId = @Preferred )
+AND NOT t.US_DESC_TYPE = 3;
 
 UPDATE rf21_term t
 SET t.GB_DESC_TYPE = 1
@@ -305,7 +318,8 @@ WHERE EXISTS (
 	select 1 from rf2_crefset gb
 	where gb.refsetID = @GBRefSet
 	and t.DESCRIPTIONID = gb.referencedComponentId
-	and gb.linkedComponentId = @Preferred );
+	and gb.linkedComponentId = @Preferred )
+AND NOT t.GB_DESC_TYPE = 3;
 
 UPDATE rf21_def d
 SET d.FULLYSPECIFIEDNAME = (
@@ -382,7 +396,7 @@ INSERT INTO rf21_subsetlist SELECT DISTINCT
 	1 AS SUBSETVERSION, 
 	m.SubsetName AS SUBSETNAME, 
 	CASE WHEN LEFT(RIGHT(s.refsetId,3),1) = 1 THEN 3 ELSE 1 END AS SUBSETTYPE, 
-	'en-GB' AS LANGUAGECODE, 
+	CASE WHEN m.refsetId = 900000000000508004 THEN 'en-GB' ELSE 'en-US' END AS LANGUAGECODE, 
 	'0080' AS SubsetRealmID, 
 	0 AS CONTEXTID
 FROM rf2_crefset s 
@@ -391,9 +405,11 @@ FROM rf2_crefset s
 	INNER JOIN rf21_rel r 
 		ON s.refsetId = r.CONCEPTID1 
 		AND r.RELATIONSHIPTYPE = '116680003' 
+		-- English [International Organization for Standardization 639-1 code en] language reference set  
+		-- This matches both types of English Lang refset ie US and GB
 		AND r.CONCEPTID2 = '900000000000507009'; 
-	-- English [International Organization for Standardization 639-1 code en] language reference set  
-	-- This matches both types of English Lang refset ie US and GB
+
+SELECT * from rf21_subsetlist;
 
 INSERT INTO rf21_subsets 
 	SELECT m.OriginalSubsetId AS SubsetId, referencedComponentId AS MemberID, 

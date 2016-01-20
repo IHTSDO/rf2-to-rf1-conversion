@@ -97,6 +97,8 @@ CREATE INDEX idx_ref_ref ON rf2_refset(refsetId);
 CREATE INDEX idx_cref_ref ON rf2_crefset(refsetId);
 CREATE INDEX idx_icref_ref ON rf2_icrefset(refsetId);
 CREATE INDEX idx_sref_ref ON rf2_srefset(refsetId);
+CREATE INDEX idx_sref_rci ON rf2_srefset(referencedComponentId);
+
 CREATE INDEX idx_cciref_ref ON rf2_ccirefset(refsetId);
 CREATE INDEX idx_ciref_ref ON rf2_cirefset(refsetId);
 CREATE INDEX idx_ssref_ref ON rf2_ssrefset(refsetId);
@@ -105,7 +107,7 @@ CREATE INDEX idx_iisssciref_ref ON rf2_iissscirefset(refsetId);
 CREATE INDEX idx_ref_rci ON rf2_refset(referencedComponentId);
 CREATE INDEX idx_cref_rci ON rf2_crefset(referencedComponentId);
 CREATE INDEX idx_icref_rci ON rf2_icrefset(referencedComponentId);
-CREATE INDEX idx_sref_rci ON rf2_srefset(referencedComponentId);
+
 CREATE INDEX idx_cciref_rci ON rf2_ccirefset(referencedComponentId);
 CREATE INDEX idx_ciref_rci ON rf2_cirefset(referencedComponentId);
 CREATE INDEX idx_ssref_rci ON rf2_ssrefset(referencedComponentId);

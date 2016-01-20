@@ -7,12 +7,16 @@ import java.io.IOException;
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Stopwatch;
 import com.google.common.io.Resources;
 
 public class DBManager {
@@ -33,10 +37,12 @@ public class DBManager {
 		getDBConnection(dbLocation);
 	}
 
-	private void getDBConnection(File dbLocation) throws RF1ConversionException {
+	private void getDBConnection(File dbLocationParent) throws RF1ConversionException {
 		try {
 			Class.forName(DB_DRIVER);
-			String dbConnectionStr = "jdbc:h2:" + dbLocation.getPath() + File.separator + "rf2-to-rf1-conversion";
+			String dblocation = dbLocationParent.getPath() + File.separator + "rf2-to-rf1-conversion";
+			debug("Creating temporary data in folder: " + dblocation);
+			String dbConnectionStr = "jdbc:h2:" + dblocation;
 			dbConn = DriverManager.getConnection(dbConnectionStr, DB_USER, DB_PASSWORD);
 		} catch (ClassNotFoundException | SQLException e) {
 			throw new RF1ConversionException("Failed to initialise in memory database", e);
@@ -84,14 +90,45 @@ public class DBManager {
 	public void executeSql(String sql) throws RF1ConversionException {
 		try {
 			debug("Running: " + sql);
-			Statement stmt = dbConn.createStatement();
-			stmt.execute(sql);
-			if (sql.contains("INSERT") || sql.contains("UPDATE")) {
-				debug("Rows updated: " + stmt.getUpdateCount());
+			long startTime = System.currentTimeMillis();
+			if (sql.startsWith("STOP")) {
+				throw new RF1ConversionException("Manually stated \"STOP\" encountered");
+			} else if (sql.startsWith("SELECT")) {
+				executeSelect(sql);
+			} else {
+				Statement stmt = dbConn.createStatement();
+				stmt.execute(sql);
+				if (sql.contains("INSERT") || sql.contains("UPDATE")) {
+					String elapsed = new DecimalFormat("#.##").format((System.currentTimeMillis() - startTime) / 1000.00d);
+					debug("Rows updated: " + stmt.getUpdateCount() + " in " + elapsed + " secs.");
+				}
 			}
 		} catch (SQLException e) {
 			throw new RF1ConversionException("Failed to execute SQL Statement", e);
 		}
+	}
+
+	private void executeSelect(String sql) throws SQLException {
+		Statement stmt = dbConn.createStatement();
+		ResultSet rs = stmt.executeQuery(sql);
+		ResultSetMetaData md = rs.getMetaData();
+		int columnCount = md.getColumnCount();
+		String header = "";
+		for (int i=1; i <= columnCount; i++ ) {
+			header += md.getColumnLabel(i) + "\t";
+		}
+		print (header);
+		print (new String(new char[header.length()]).replace("\0", "="));
+		
+		StringBuilder sb = new StringBuilder();
+		while (rs.next()) {
+			sb.setLength(0);  //Empty the string
+			for (int i=1; i <= columnCount; i++ ) {
+				sb.append(rs.getString(i)).append("\t");
+			}
+			print (sb.toString());
+		}
+
 	}
 
 	public void shutDown(boolean deleteFiles) throws RF1ConversionException {
@@ -110,7 +147,7 @@ public class DBManager {
 			debug("Exporting data into " + outputFile.getName());
 			// Field separator set to ASCII 21 = NAK to ensure double quotes (the default separator) are ignored
 			String sql = "CALL CSVWRITE('" + outputFile.getPath() + "', '" + selectionSql + "',"
-					+ "'charset=UTF-8 fieldSeparator=' || CHAR(9));";
+					+ "'charset=UTF-8 fieldSeparator=' || CHAR(9) || ' fieldDelimiter=');";
 			dbConn.createStatement().execute(sql);
 		} catch (SQLException e) {
 			throw new RF1ConversionException("Failed to export data to file " + outputFile.getName(), e);

@@ -13,7 +13,7 @@ public class RF1Constants {
 	public static final String ADDITIONAL = "900000000000227009";
 
 	private static Map<String, Byte> rf1Map = new HashMap<String, Byte>();
-	{
+	static {
 		rf1Map.put("900000000000441003", (byte) 99); /* SNOMED CT Model Component (metadata) */
 		rf1Map.put("106237007", (byte) 99); /* Linkage concept (linkage concept) */
 		rf1Map.put("370136006", (byte) 99); /* Namespace concept (namespace concept) */
@@ -157,7 +157,7 @@ public class RF1Constants {
 	}
 
 	private static Map<String, String> sourceMap = new HashMap<String, String>();
-	{
+	static {
 		sourceMap.put("900000000000207008","CORE"); /* SNOMED CT core module (core metadata concept) */
 		sourceMap.put("900000000000012004","META"); /* SNOMED CT model component module (core metadata concept) */
 		sourceMap.put("999000011000000103","UKEX"); /* SNOMED CT United Kingdom clinical extension module (core metadata concept) */
