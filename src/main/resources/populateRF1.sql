@@ -226,7 +226,22 @@ Values ('DUMMY', '00000000', 1, 900000000000207008, 900000000000497000, 46761400
 MERGE INTO rf2_srefset (id, effectiveTime, active, moduleId, refSetId, referencedComponentId, linkedString)
 KEY (referencedComponentId, refsetId)
 Values ('DUMMY', '00000000', 1, 900000000000207008, 900000000000498005, 467614008, 'R-FD64C' );
-	
+
+--Insert Concept Component History, first creation
+INSERT INTO rf21_COMPONENTHISTORY
+SELECT id, effectiveTime, 0, 0, '',''
+FROM rf2_concept_sv c
+WHERE c.effectiveTime =
+  (SELECT MIN(c2.effectiveTime) AS firstCreated FROM rf2_concept_sv AS c2
+   WHERE c.id=c2.id );	
+   
+--Insert Description Component History, first creation
+INSERT INTO rf21_COMPONENTHISTORY
+SELECT id, effectiveTime, 0, 0, '',''
+FROM rf2_term_sv d
+WHERE d.effectiveTime =
+  (SELECT MIN(d2.effectiveTime) AS firstCreated FROM rf2_term_sv AS d2
+   WHERE d.id=d2.id );
 	
  -- CTV3
 UPDATE rf21_concept c
