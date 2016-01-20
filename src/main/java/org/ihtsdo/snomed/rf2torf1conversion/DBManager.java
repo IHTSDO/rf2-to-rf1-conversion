@@ -49,14 +49,17 @@ public class DBManager {
 		}
 	}
 
-	public void executeResource(String resourceName) throws RF1ConversionException {
+	public void executeResource(String resourceName, boolean multiPass) throws RF1ConversionException {
 		try {
-			print("Excecuting resource: " + resourceName);
+			print("Excecuting resource: " + resourceName + (multiPass ? " multiple Times." : ""));
 			List<String> sqlStatements = loadSqlStatements(resourceName);
+			Long rowsUpdated = null;
 			for (String sql : sqlStatements) {
 				sql = sql.trim();
 				if (sql.length() > 0) {
-					executeSql(sql);
+					do {
+						rowsUpdated = executeSql(sql);
+					} while (multiPass && rowsUpdated != null && rowsUpdated.longValue() > 0);
 				}
 			}
 		} catch (IOException | RF1ConversionException e) {
@@ -87,9 +90,10 @@ public class DBManager {
 		}
 	}
 
-	public void executeSql(String sql) throws RF1ConversionException {
+	public Long executeSql(String sql) throws RF1ConversionException {
 		try {
 			debug("Running: " + sql);
+			Long rowsUpdated = null;
 			long startTime = System.currentTimeMillis();
 			if (sql.startsWith("STOP")) {
 				throw new RF1ConversionException("Manually stated \"STOP\" encountered");
@@ -100,9 +104,11 @@ public class DBManager {
 				stmt.execute(sql);
 				if (sql.contains("INSERT") || sql.contains("UPDATE")) {
 					String elapsed = new DecimalFormat("#.##").format((System.currentTimeMillis() - startTime) / 1000.00d);
-					debug("Rows updated: " + stmt.getUpdateCount() + " in " + elapsed + " secs.");
+					rowsUpdated = new Long(stmt.getUpdateCount());
+					debug("Rows updated: " + rowsUpdated + " in " + elapsed + " secs.");
 				}
 			}
+			return rowsUpdated;
 		} catch (SQLException e) {
 			throw new RF1ConversionException("Failed to execute SQL Statement", e);
 		}
@@ -153,4 +159,5 @@ public class DBManager {
 			throw new RF1ConversionException("Failed to export data to file " + outputFile.getName(), e);
 		}
 	}
+
 }

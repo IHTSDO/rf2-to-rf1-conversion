@@ -1,5 +1,7 @@
 	CREATE INDEX idx_conceptv_id ON rf2_concept_sv(ID);
+	CREATE INDEX idx_conceptv_et ON rf2_concept_sv(effectiveTime);
 	CREATE INDEX idx_termv_id ON rf2_term_sv(ID);
+	CREATE INDEX idx_termv_et ON rf2_term_sv(effectiveTime);
 	CREATE INDEX idx_defv_id ON rf2_def_sv(ID);
 	CREATE INDEX idx_relv_id ON rf2_rel_sv(ID);
 	CREATE INDEX idx_identifierv_id ON rf2_identifier_sv(referencedComponentId,identifierSchemeId);

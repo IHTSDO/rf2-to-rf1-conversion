@@ -73,7 +73,7 @@ public class ConversionManager {
 			cm.loadRF2Data(loadingArea);
 
 			print("Creating indexes...");
-			cm.db.executeResource("create_rf2_indexes.sql");
+			cm.db.executeResource("create_rf2_indexes.sql", false);
 
 			print("Calculating RF2 snapshot...");
 			cm.calculateRF2Snapshot();
@@ -106,8 +106,8 @@ public class ConversionManager {
 	private void calculateRF2Snapshot() throws RF1ConversionException {
 		String setDateSql = "SET @RDATE = " + releaseDate;
 		db.executeSql(setDateSql);
-		db.executeResource("create_rf2_snapshot.sql");
-		db.executeResource("populate_subset_2_refset.sql");
+		// db.executeResource("create_rf2_snapshot.sql", false);
+		db.executeResource("populate_subset_2_refset.sql", false);
 	}
 
 	private File unzipArchive() throws RF1ConversionException {
@@ -119,13 +119,17 @@ public class ConversionManager {
 
 	private void createDatabaseSchema() throws RF1ConversionException {
 		print("Creating database schema");
-		db.executeResource("create_schema.sql");
+		db.executeResource("create_rf2_schema.sql", false);
 		// db.executeResource("create_rf2_utility_procedures.sql");
 		// db.executeResource("create_rf2_extract_snapshot_procedure.sql");
 	}
 
 	private void convert() throws RF1ConversionException {
-		db.executeResource("populateRF1.sql");
+		db.executeResource("create_rf1_schema.sql", false);
+		db.executeResource("populate_rf1_historical_component_creation.sql", false);
+		db.executeResource("populate_rf1_historical_state_changes.sql", true);
+		db.executeResource("populate_rf1.sql", false);
+		// db.executeResource("populateRF1.sql");
 	}
 
 	private void init(String[] args, File dbLocation) throws RF1ConversionException {
