@@ -12,6 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.io.IOUtils;
 
@@ -77,5 +78,40 @@ public class GlobalUtils {
 			}
 		}
 		return null;
+	}
+
+	public static void createArchive(File exportLocation) throws RF1ConversionException {
+		try {
+			// The zip filename will be the name of the first thing in the zip location
+			// ie in this case the directory SnomedCT_RF1Release_INT_20150731
+			String zipFileName = exportLocation.listFiles()[0].getName();
+			ZipOutputStream out = new ZipOutputStream(new FileOutputStream(zipFileName));
+			print("Creating archive : " + zipFileName);
+			addDir(exportLocation, out);
+			out.close();
+		} catch (IOException e) {
+			throw new RF1ConversionException("Failed to create RF1 Archive from " + exportLocation, e);
+		}
+	}
+
+	public static void addDir(File dirObj, ZipOutputStream out) throws IOException {
+		File[] files = dirObj.listFiles();
+		byte[] tmpBuf = new byte[1024];
+
+		for (int i = 0; i < files.length; i++) {
+			if (files[i].isDirectory()) {
+				addDir(files[i], out);
+				continue;
+			}
+			FileInputStream in = new FileInputStream(files[i].getAbsolutePath());
+			debug(" Adding: " + files[i].getAbsolutePath());
+			out.putNextEntry(new ZipEntry(files[i].getAbsolutePath()));
+			int len;
+			while ((len = in.read(tmpBuf)) > 0) {
+				out.write(tmpBuf, 0, len);
+			}
+			out.closeEntry();
+			in.close();
+		}
 	}
 }
