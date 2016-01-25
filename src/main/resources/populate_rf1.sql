@@ -299,3 +299,6 @@ INSERT INTO rf21_subsets
 		AND r.RELATIONSHIPTYPE = '116680003' 
 		AND r.CONCEPTID2 = '900000000000507009'; -- English [International Organization for Standardization 639-1 code en] language reference set  
 
+-- RF2 to RF1 Conversion will not supply relationship ids
+UPDATE rf21_rel
+SET RELATIONSHIPID = null;

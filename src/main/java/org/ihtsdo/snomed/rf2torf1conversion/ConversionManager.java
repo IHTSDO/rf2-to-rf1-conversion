@@ -3,6 +3,7 @@ package org.ihtsdo.snomed.rf2torf1conversion;
 import static org.ihtsdo.snomed.rf2torf1conversion.GlobalUtils.*;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -42,19 +43,31 @@ public class ConversionManager {
 
 	public static final Map<String, String> exportMap = new HashMap<String, String>();
 	{
-		exportMap.put("sct1_ComponentHistory_Core_INT_DATE.txt", "select * from rf21_COMPONENTHISTORY");
-		exportMap.put("sct1_TextDefinitions_en-US_INT_DATE.txt", "select * from rf21_DEF");
-		exportMap.put("sct1_References_Core_INT_DATE.txt", "select * from rf21_REFERENCE");
-		exportMap.put("der1_SubsetMembers_en-GB_INT_DATE.txt", "select s.* from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.subsetid = sl.subsetid AND sl.languageCode in (''en'',''en-GB'')");
-		exportMap.put("der1_SubsetMembers_en-US_INT_DATE.txt", "select s.* from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.subsetid = sl.subsetid AND sl.languageCode in (''en'',''en-US'')");
-		exportMap.put("der1_Subsets_en-GB_INT_DATE.txt", "select sl.* from rf21_SUBSETLIST sl where languagecode like ''%GB%''");
-		exportMap.put("der1_Subsets_en-US_INT_DATE.txt", "select sl.* from rf21_SUBSETLIST sl where languagecode like ''%US%''");
+		// The slashes will be replaced with the OS appropriate separator at export time
+		exportMap.put("SnomedCT_RF1Release_INT_DATE/Terminology/Content/sct1_Concepts_Core_INT_DATE.txt",
+				"select CONCEPTID, CONCEPTSTATUS, FULLYSPECIFIEDNAME, CTV3ID, SNOMEDID, ISPRIMITIVE from rf21_concept");
+		exportMap.put("SnomedCT_RF1Release_INT_DATE/Terminology/Content/sct1_Relationships_Core_INT_DATE.txt", "select * from rf21_rel");
+		exportMap
+				.put("SnomedCT_RF1Release_INT_DATE/Terminology/Content/sct1_Descriptions_en_INT_DATE.txt",
+						"select DESCRIPTIONID, DESCRIPTIONSTATUS, CONCEPTID, TERM, INITIALCAPITALSTATUS, US_DESC_TYPE as DESCRIPTIONTYPE, LANGUAGECODE from rf21_term");
+		exportMap.put("SnomedCT_RF1Release_INT_DATE/Resources/TextDefinitions/sct1_TextDefinitions_en-US_INT_DATE.txt",
+				"select * from rf21_DEF");
+		exportMap.put("SnomedCT_RF1Release_INT_DATE/Terminology/History/sct1_ComponentHistory_Core_INT_DATE.txt",
+				"select * from rf21_COMPONENTHISTORY");
+		exportMap.put("SnomedCT_RF1Release_INT_DATE/Terminology/History/sct1_References_Core_INT_DATE.txt", "select * from rf21_REFERENCE");
+		exportMap
+				.put("SnomedCT_RF1Release_INT_DATE/Subsets/Language-en-GB/der1_SubsetMembers_en-GB_INT_DATE.txt",
+						"select s.* from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.subsetid = sl.subsetid AND sl.languageCode in (''en'',''en-GB'')");
+		exportMap.put("SnomedCT_RF1Release_INT_DATE/Subsets/Language-en-GB/der1_Subsets_en-GB_INT_DATE.txt",
+				"select sl.* from rf21_SUBSETLIST sl where languagecode like ''%GB%''");
+		exportMap
+				.put("SnomedCT_RF1Release_INT_DATE/Subsets/Language-en-US/der1_SubsetMembers_en-US_INT_DATE.txt",
+						"select s.* from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.subsetid = sl.subsetid AND sl.languageCode in (''en'',''en-US'')");
+		exportMap.put("SnomedCT_RF1Release_INT_DATE/Subsets/Language-en-US/der1_Subsets_en-US_INT_DATE.txt",
+				"select sl.* from rf21_SUBSETLIST sl where languagecode like ''%US%''");
 		// exportMap.put("rf21_XMAPLIST");
 		// exportMap.put("rf21_XMAPS");
 		// exportMap.put("rf21_XMAPTARGET");
-		exportMap.put("sct1_Concepts_Core_INT_DATE.txt", "select * from rf21_concept");
-		exportMap.put("sct1_Relationships_Core_INT_DATE.txt", "select * from rf21_rel");
-		exportMap.put("sct1_Descriptions_en_INT_DATE.txt", "select DESCRIPTIONID, DESCRIPTIONSTATUS, CONCEPTID, TERM, INITIALCAPITALSTATUS, US_DESC_TYPE as DESCRIPTIONTYPE, LANGUAGECODE from rf21_term");
 
 	}
 
@@ -64,6 +77,7 @@ public class ConversionManager {
 		cm.init(args, tempDBLocation);
 		cm.createDatabaseSchema();
 		File loadingArea = null;
+		File exportArea = null;
 		try {
 			print("Extracting RF2 Data...");
 			loadingArea = cm.unzipArchive();
@@ -82,7 +96,11 @@ public class ConversionManager {
 			cm.convert();
 
 			print("Exporting RF1 to file...");
-			cm.exportRF1Data();
+			exportArea = cm.exportRF1Data();
+
+			print("Zipping archive");
+			createArchive(exportArea);
+
 		} finally {
 			print("Cleaning up resources...");
 			try {
@@ -97,39 +115,39 @@ public class ConversionManager {
 				if (loadingArea != null && loadingArea.exists()) {
 					FileUtils.deleteDirectory(loadingArea);
 				}
+
+				if (exportArea != null && exportArea.exists()) {
+					FileUtils.deleteDirectory(exportArea);
+				}
 			} catch (Exception e) {
-				debug("Error while cleaning up loading Area " + loadingArea.getPath() + e.getMessage());
+				debug("Error while cleaning up loading/export Areas " + loadingArea.getPath() + e.getMessage());
 			}
 		}
-	}
-
-	private void calculateRF2Snapshot() throws RF1ConversionException {
-		String setDateSql = "SET @RDATE = " + releaseDate;
-		db.executeSql(setDateSql);
-		// db.executeResource("create_rf2_snapshot.sql", false);
-		db.executeResource("populate_subset_2_refset.sql", false);
 	}
 
 	private File unzipArchive() throws RF1ConversionException {
 		File tempDir = Files.createTempDir();
 		// We only need to work with the full files
-		GlobalUtils.unzipFlat(rf2Archive, tempDir, "Full");
+		unzipFlat(rf2Archive, tempDir, "Full");
 		return tempDir;
 	}
 
 	private void createDatabaseSchema() throws RF1ConversionException {
 		print("Creating database schema");
 		db.executeResource("create_rf2_schema.sql", false);
-		// db.executeResource("create_rf2_utility_procedures.sql");
-		// db.executeResource("create_rf2_extract_snapshot_procedure.sql");
+	}
+
+	private void calculateRF2Snapshot() throws RF1ConversionException {
+		String setDateSql = "SET @RDATE = " + releaseDate;
+		db.executeSql(setDateSql);
+		db.executeResource("create_rf2_snapshot.sql", false);
+		db.executeResource("populate_subset_2_refset.sql", false);
 	}
 
 	private void convert() throws RF1ConversionException {
 		db.executeResource("create_rf1_schema.sql", false);
-		db.executeResource("populate_rf1_historical_component_creation.sql", false);
-		db.executeResource("populate_rf1_historical_state_changes.sql", true);
+		db.executeResource("populate_rf1_historical.sql", false);
 		db.executeResource("populate_rf1.sql", false);
-		// db.executeResource("populateRF1.sql");
 	}
 
 	private void init(String[] args, File dbLocation) throws RF1ConversionException {
@@ -168,13 +186,15 @@ public class ConversionManager {
 		}
 	}
 
-	private void exportRF1Data() throws RF1ConversionException {
+	private File exportRF1Data() throws RF1ConversionException {
+		File tempExportLocation = Files.createTempDir();
 		for (Map.Entry<String, String> entry : exportMap.entrySet()) {
 			// Replace DATE in the filename with the actual release date
 			String fileName = entry.getKey().replace("DATE", releaseDate);
-			File file = new File(fileName);
-			db.export(file, entry.getValue());
+			String filePath = tempExportLocation + "/" + fileName;
+			db.export(filePath, entry.getValue());
 		}
+		return tempExportLocation;
 	}
 
 }

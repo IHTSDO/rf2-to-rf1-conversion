@@ -2,7 +2,6 @@ package org.ihtsdo.snomed.rf2torf1conversion;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -84,28 +83,34 @@ public class GlobalUtils {
 		try {
 			// The zip filename will be the name of the first thing in the zip location
 			// ie in this case the directory SnomedCT_RF1Release_INT_20150731
-			String zipFileName = exportLocation.listFiles()[0].getName();
+			String zipFileName = exportLocation.listFiles()[0].getName() + ".zip";
+			int fileNameModifier = 1;
+			while (new File(zipFileName).exists()) {
+				zipFileName = exportLocation.listFiles()[0].getName() + "_" + fileNameModifier++ + ".zip";
+			}
 			ZipOutputStream out = new ZipOutputStream(new FileOutputStream(zipFileName));
-			print("Creating archive : " + zipFileName);
-			addDir(exportLocation, out);
+			String rootLocation = exportLocation.getAbsolutePath() + File.separator;
+			print("Creating archive : " + zipFileName + " from files found in " + rootLocation);
+			addDir(rootLocation, exportLocation, out);
 			out.close();
 		} catch (IOException e) {
 			throw new RF1ConversionException("Failed to create RF1 Archive from " + exportLocation, e);
 		}
 	}
 
-	public static void addDir(File dirObj, ZipOutputStream out) throws IOException {
+	public static void addDir(String rootLocation, File dirObj, ZipOutputStream out) throws IOException {
 		File[] files = dirObj.listFiles();
 		byte[] tmpBuf = new byte[1024];
 
 		for (int i = 0; i < files.length; i++) {
 			if (files[i].isDirectory()) {
-				addDir(files[i], out);
+				addDir(rootLocation, files[i], out);
 				continue;
 			}
 			FileInputStream in = new FileInputStream(files[i].getAbsolutePath());
-			debug(" Adding: " + files[i].getAbsolutePath());
-			out.putNextEntry(new ZipEntry(files[i].getAbsolutePath()));
+			String relativePath = files[i].getAbsolutePath().substring(rootLocation.length());
+			debug(" Adding: " + relativePath);
+			out.putNextEntry(new ZipEntry(relativePath));
 			int len;
 			while ((len = in.read(tmpBuf)) > 0) {
 				out.write(tmpBuf, 0, len);

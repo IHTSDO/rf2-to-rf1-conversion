@@ -29,6 +29,7 @@ public class DBManager {
 
 	private static final String DELIMITER_SEQUENCE = "DELIMITER $$";
 	private static final String DELIMITER_RESET = "DELIMITER ;";
+	private static final String DEFAULT_FILE_SEPARATOR = "/";
 
 	private Connection dbConn;
 
@@ -148,15 +149,23 @@ public class DBManager {
 		}
 	}
 
-	public void export(File outputFile, String selectionSql) throws RF1ConversionException {
+	public void export(String outputFilePath, String selectionSql) throws RF1ConversionException {
 		try {
+			// Make the path separator compatible with the OS
+			outputFilePath = outputFilePath.replace(DEFAULT_FILE_SEPARATOR, File.separator);
+
+			// Create the parent directory structure if required
+			File outputFile = new File(outputFilePath);
+			outputFile.getParentFile().mkdirs();
+
 			debug("Exporting data into " + outputFile.getName());
 			// Field separator set to ASCII 21 = NAK to ensure double quotes (the default separator) are ignored
+			// Use Windows line terminators, tab field separator and no delimiter (double quote by default)
 			String sql = "CALL CSVWRITE('" + outputFile.getPath() + "', '" + selectionSql + "',"
-					+ "'charset=UTF-8 fieldSeparator=' || CHAR(9) || ' fieldDelimiter=');";
+					+ "'charset=UTF-8 lineSeparator=' || CHAR(13) || CHAR(10) ||' fieldSeparator=' || CHAR(9) || ' fieldDelimiter=');";
 			dbConn.createStatement().execute(sql);
 		} catch (SQLException e) {
-			throw new RF1ConversionException("Failed to export data to file " + outputFile.getName(), e);
+			throw new RF1ConversionException("Failed to export data to file " + outputFilePath, e);
 		}
 	}
 
