@@ -9,7 +9,14 @@ SELECT DISTINCT
   'Xxxxx' AS SNOMEDID,
   magicNumberFor(definitionStatusId) AS ISPRIMITIVE,
   moduleSourceFor(moduleId) AS SOURCE
-FROM rf2_concept;
+FROM rf2_concept c
+WHERE NOT EXISTS (
+	-- Don't include any metadata concepts
+	SELECT 1 FROM rf2_term t
+	WHERE c.id = t.conceptid
+	AND t.typeid = 900000000000003001 --fsn
+	AND t.term like '%metadata concept)'
+);
 
 SET @FullySpecifiedName = '900000000000003001';
 SET @Definition = '900000000000550004';
@@ -23,14 +30,16 @@ INSERT INTO rf21_term
 SELECT
   id AS DESCRIPTIONID,
   statusFor(active) AS DESCRIPTIONSTATUS,
-  conceptId AS CONCEPTID,
+  t.conceptId AS CONCEPTID,
   term AS TERM,
   capitalStatusFor(caseSignificanceId) AS INITIALCAPITALSTATUS,
   descTypeFor(typeID) AS US_DESC_TYPE, -- assigns all FSNs (3) but labels all other terms as 'synonyms'
   descTypeFor(typeID) AS GB_DESC_TYPE, -- assigns all FSNs (3) but labels all other terms as 'synonyms'
-  languageCode AS LANGUAGECODE,
-  moduleSourceFor(moduleId) AS SOURCE
-FROM rf2_term;
+  t.languageCode AS LANGUAGECODE,
+  t.moduleSourceFor(moduleId) AS SOURCE
+FROM rf2_term t, rf21_concept c
+WHERE t.conceptid = c.conceptid;
+
 
 INSERT INTO rf21_def
 SELECT
