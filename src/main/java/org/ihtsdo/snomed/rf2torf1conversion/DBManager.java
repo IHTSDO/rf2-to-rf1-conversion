@@ -162,7 +162,7 @@ public class DBManager {
 			// Field separator set to ASCII 21 = NAK to ensure double quotes (the default separator) are ignored
 			// Use Windows line terminators, tab field separator and no delimiter (double quote by default)
 			String sql = "CALL CSVWRITE('" + outputFile.getPath() + "', '" + selectionSql + "',"
-					+ "'charset=UTF-8 lineSeparator=' || CHAR(13) || CHAR(10) ||' fieldSeparator=' || CHAR(9) || ' fieldDelimiter=');";
+					+ "'charset=UTF-8 lineSeparator=' || CHAR(13) || CHAR(10) ||' fieldSeparator=' || CHAR(9) || ' fieldDelimiter= escape=');";
 			dbConn.createStatement().execute(sql);
 		} catch (SQLException e) {
 			throw new RF1ConversionException("Failed to export data to file " + outputFilePath, e);
