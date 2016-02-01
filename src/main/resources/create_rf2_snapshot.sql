@@ -88,7 +88,8 @@ WHERE s.effectiveTime =
 CREATE INDEX idx_concept_id ON rf2_concept(ID);
 CREATE INDEX idx_concept_dsid ON rf2_concept(definitionStatusId);
 CREATE INDEX idx_term_cid ON rf2_term(conceptId);
-CREATE INDEX idx_term_t ON rf2_term(Term);
+CREATE INDEX idx_term_t ON rf2_term(term);
+CREATE INDEX idx_term_tid ON rf2_term(typeid);
 CREATE INDEX idx_rel_sid ON rf2_rel(sourceId);
 CREATE INDEX idx_rel_tid ON rf2_rel(typeId);
 CREATE INDEX idx_rel_did ON rf2_rel(destinationId);
