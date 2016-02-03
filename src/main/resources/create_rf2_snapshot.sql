@@ -1,3 +1,4 @@
+-- PARALLEL_START;
 
 INSERT INTO rf2_concept
 SELECT * FROM rf2_concept_sv s
@@ -84,7 +85,9 @@ SELECT * FROM rf2_iissscirefset_sv s
 WHERE s.effectiveTime =
   (SELECT MAX(sv.effectiveTime) AS LatestDate FROM rf2_iissscirefset_sv AS sv
    WHERE sv.id=s.id AND sv.effectiveTime <= @RDATE);
+-- PARALLEL_END;
 
+-- PARALLEL_START;
 CREATE INDEX idx_concept_id ON rf2_concept(ID);
 CREATE INDEX idx_concept_dsid ON rf2_concept(definitionStatusId);
 CREATE INDEX idx_term_cid ON rf2_term(conceptId);
@@ -120,8 +123,9 @@ CREATE INDEX idx_cciref_lci1 ON rf2_ccirefset(linkedComponentId1);
 CREATE INDEX idx_cciref_lci2 ON rf2_ccirefset(linkedComponentId2);
 CREATE INDEX idx_iissscref_ci ON rf2_iissscrefset(corelationID);
 CREATE INDEX idx_iisssciref_ci ON rf2_iissscirefset(corelationID);
+-- PARALLEL_END;
 
--- INSERT INTO IMPORTTIME_RF2 SET Event = 'START Clean up imported merger of edition snapshots', DTSTAMP = '', TMSTAMP=CURRENT_TIME
+-- Clean up imported merger of edition snapshots
 
 DROP TABLE IF EXISTS rf2_temp;
 CREATE TABLE rf2_temp (id VARCHAR(38) NOT NULL);

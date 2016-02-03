@@ -9,6 +9,7 @@ import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.io.Files;
 
 public class ConversionManager {
@@ -46,15 +47,20 @@ public class ConversionManager {
 		// The slashes will be replaced with the OS appropriate separator at export time
 		exportMap.put("SnomedCT_RF1Release_INT_DATE/Terminology/Content/sct1_Concepts_Core_INT_DATE.txt",
 				"select CONCEPTID, CONCEPTSTATUS, FULLYSPECIFIEDNAME, CTV3ID, SNOMEDID, ISPRIMITIVE from rf21_concept");
-		exportMap.put("SnomedCT_RF1Release_INT_DATE/Terminology/Content/sct1_Relationships_Core_INT_DATE.txt", "select * from rf21_rel");
+		exportMap
+				.put("SnomedCT_RF1Release_INT_DATE/Terminology/Content/sct1_Relationships_Core_INT_DATE.txt",
+						"select RELATIONSHIPID,CONCEPTID1,RELATIONSHIPTYPE,CONCEPTID2,CHARACTERISTICTYPE,REFINABILITY,RELATIONSHIPGROUP from rf21_rel");
 		exportMap
 				.put("SnomedCT_RF1Release_INT_DATE/Terminology/Content/sct1_Descriptions_en_INT_DATE.txt",
-						"select DESCRIPTIONID, DESCRIPTIONSTATUS, CONCEPTID, TERM, INITIALCAPITALSTATUS, US_DESC_TYPE as DESCRIPTIONTYPE, LANGUAGECODE from rf21_term");
+						"select DESCRIPTIONID, DESCRIPTIONSTATUS, CONCEPTID, TERM, INITIALCAPITALSTATUS, US_DESC_TYPE as DESCRIPTIONTYPE, LANGUAGECODE from rf21_term where languageCode in (''en'',''en-US'')"
+								+ " UNION "
+								+ "select DESCRIPTIONID, DESCRIPTIONSTATUS, CONCEPTID, TERM, INITIALCAPITALSTATUS, GB_DESC_TYPE as DESCRIPTIONTYPE, LANGUAGECODE from rf21_term where languageCode =''en-GB''");
 		exportMap.put("SnomedCT_RF1Release_INT_DATE/Resources/TextDefinitions/sct1_TextDefinitions_en-US_INT_DATE.txt",
 				"select * from rf21_DEF");
 		exportMap.put("SnomedCT_RF1Release_INT_DATE/Terminology/History/sct1_ComponentHistory_Core_INT_DATE.txt",
 				"select * from rf21_COMPONENTHISTORY");
-		exportMap.put("SnomedCT_RF1Release_INT_DATE/Terminology/History/sct1_References_Core_INT_DATE.txt", "select * from rf21_REFERENCE");
+		exportMap.put("SnomedCT_RF1Release_INT_DATE/Terminology/History/sct1_References_Core_INT_DATE.txt",
+				"select COMPONENTID, REFERENCETYPE, REFERENCEDID from rf21_REFERENCE");
 		exportMap
 				.put("SnomedCT_RF1Release_INT_DATE/Subsets/Language-en-GB/der1_SubsetMembers_en-GB_INT_DATE.txt",
 						"select s.* from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.subsetid = sl.subsetid AND sl.languageCode in (''en'',''en-GB'')");
@@ -78,30 +84,38 @@ public class ConversionManager {
 		cm.createDatabaseSchema();
 		File loadingArea = null;
 		File exportArea = null;
+		Stopwatch stopwatch = Stopwatch.createStarted();
+		String completionStatus = "failed";
 		try {
-			print("Extracting RF2 Data...");
+
+			print("\nExtracting RF2 Data...");
 			loadingArea = cm.unzipArchive();
 
-			print("Loading RF2 Data...");
+			print("\nLoading RF2 Data...");
 			cm.releaseDate = findDateInString(loadingArea.listFiles()[0].getName(), false);
+			// We can do the load in parallel
+			cm.db.setParallelMode(true);
 			cm.loadRF2Data(loadingArea);
+			cm.db.setParallelMode(false);
 
-			print("Creating indexes...");
+			debug("\nCreating RF2 indexes...");
 			cm.db.executeResource("create_rf2_indexes.sql", false);
 
-			print("Calculating RF2 snapshot...");
+			print("\nCalculating RF2 snapshot...");
 			cm.calculateRF2Snapshot();
 
-			print("Converting RF2 to RF1...");
+			print("\nConverting RF2 to RF1...");
 			cm.convert();
 
-			print("Exporting RF1 to file...");
+			print("\nExporting RF1 to file...");
 			exportArea = cm.exportRF1Data();
 
-			print("Zipping archive");
+			print("\nZipping archive");
 			createArchive(exportArea);
 
+			completionStatus = "completed";
 		} finally {
+			print("Process " + completionStatus + " in " + stopwatch + " after " + getProgress() + " operations.");
 			print("Cleaning up resources...");
 			try {
 				cm.db.shutDown(true); // Also deletes all files

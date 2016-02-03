@@ -1,5 +1,8 @@
 package org.ihtsdo.snomed.rf2torf1conversion;
 
+import static org.ihtsdo.snomed.rf2torf1conversion.GlobalUtils.printn;
+import static org.ihtsdo.snomed.rf2torf1conversion.GlobalUtils.verbose;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -19,8 +22,15 @@ public class GlobalUtils {
 
 	public static boolean verbose;
 
+	private static double maxQueries = 641;
+	private static double queriesRun = 0;
+
 	public static void print(String msg) {
 		System.out.println(msg);
+	}
+
+	public static void printn(String msg) {
+		System.out.print(msg);
 	}
 
 	public static void exit() {
@@ -52,6 +62,7 @@ public class GlobalUtils {
 							OutputStream out = new FileOutputStream(extractedFile);
 							IOUtils.copy(zis, out);
 							IOUtils.closeQuietly(out);
+							updateProgress();
 						}
 					}
 					ze = zis.getNextEntry();
@@ -77,6 +88,18 @@ public class GlobalUtils {
 			}
 		}
 		return null;
+	}
+
+	public static double getProgress() {
+		return queriesRun;
+	}
+
+	public static void updateProgress() {
+		queriesRun++;
+		if (!verbose) {
+			double percentageComplete = (queriesRun / maxQueries) * 100d;
+			printn("\r" + String.format("%.2f", percentageComplete) + "% complete.");
+		}
 	}
 
 	public static void createArchive(File exportLocation) throws RF1ConversionException {
@@ -110,6 +133,7 @@ public class GlobalUtils {
 			FileInputStream in = new FileInputStream(files[i].getAbsolutePath());
 			String relativePath = files[i].getAbsolutePath().substring(rootLocation.length());
 			debug(" Adding: " + relativePath);
+			updateProgress();
 			out.putNextEntry(new ZipEntry(relativePath));
 			int len;
 			while ((len = in.read(tmpBuf)) > 0) {

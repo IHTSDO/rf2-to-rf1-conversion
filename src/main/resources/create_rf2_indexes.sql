@@ -1,3 +1,5 @@
+-- PARALLEL_START;
+	
 	CREATE INDEX idx_conceptv_id ON rf2_concept_sv(ID);
 	CREATE INDEX idx_conceptv_et ON rf2_concept_sv(effectiveTime);
 	CREATE INDEX idx_termv_id ON rf2_term_sv(ID);
@@ -62,3 +64,5 @@
 	CREATE INDEX idx_iissscirefsetp_corId ON rf2_iissscirefset_sp(corelationID);
 
 	CREATE INDEX idx_s2r_refid ON RF2_subset2refset(refsetID);
+
+-- PARALLEL_END;
