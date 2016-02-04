@@ -1,8 +1,5 @@
 package org.ihtsdo.snomed.rf2torf1conversion;
 
-import static org.ihtsdo.snomed.rf2torf1conversion.GlobalUtils.printn;
-import static org.ihtsdo.snomed.rf2torf1conversion.GlobalUtils.verbose;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -22,7 +19,7 @@ public class GlobalUtils {
 
 	public static boolean verbose;
 
-	private static double maxQueries = 641;
+	private static double maxOperations = 681;
 	private static double queriesRun = 0;
 
 	public static void print(String msg) {
@@ -94,10 +91,14 @@ public class GlobalUtils {
 		return queriesRun;
 	}
 
-	public static void updateProgress() {
+	public static double getMaxOperations() {
+		return maxOperations;
+	}
+
+	synchronized public static void updateProgress() {
 		queriesRun++;
 		if (!verbose) {
-			double percentageComplete = (queriesRun / maxQueries) * 100d;
+			double percentageComplete = (queriesRun / maxOperations) * 100d;
 			printn("\r" + String.format("%.2f", percentageComplete) + "% complete.");
 		}
 	}
@@ -113,7 +114,7 @@ public class GlobalUtils {
 			}
 			ZipOutputStream out = new ZipOutputStream(new FileOutputStream(zipFileName));
 			String rootLocation = exportLocation.getAbsolutePath() + File.separator;
-			print("Creating archive : " + zipFileName + " from files found in " + rootLocation);
+			debug("Creating archive : " + zipFileName + " from files found in " + rootLocation);
 			addDir(rootLocation, exportLocation, out);
 			out.close();
 		} catch (IOException e) {

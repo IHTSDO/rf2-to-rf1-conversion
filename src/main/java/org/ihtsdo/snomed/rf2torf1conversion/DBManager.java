@@ -14,6 +14,9 @@ import java.sql.Statement;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
@@ -21,6 +24,7 @@ import com.google.common.io.Resources;
 public class DBManager {
 
 	private static final String DB_DRIVER = "org.h2.Driver";
+	private static final String DB_OPTIONS = "MULTI_THREADED=1;LOG=0;CACHE_SIZE=65536;LOCK_MODE=3";
 	// In Memory Database fails when we try to load in the full relationship file
 	// private static final String DB_CONNECTION = "jdbc:h2:mem:rf1_conversion;DB_CLOSE_DELAY=-1";
 	private static final String DB_USER = "";
@@ -30,17 +34,36 @@ public class DBManager {
 	private static final String DELIMITER_RESET = "DELIMITER ;";
 	private static final String DEFAULT_FILE_SEPARATOR = "/";
 
+	private ExecutorService executor = null;
+
 	private boolean parallelMode = false;
 
-	synchronized public void setParallelMode(boolean isParallel) {
-		parallelMode = isParallel;
-		// When we stop running in parallel, we have to wait for all threads to catch up
-		if (!isParallel) {
-			debug("Ensuring all currently running processes complete...");
+	private Connection dbConn;
+
+	synchronized public void startParallelProcessing(int threadCount) throws RF1ConversionException {
+		if (parallelMode == true) {
+			throw new RF1ConversionException("Cannot start parallel processing while existing parallel processes exist.");
 		}
+		print("\nStarting Parallel Processing");
+		parallelMode = true;
+		executor = Executors.newFixedThreadPool(threadCount);
 	}
 
-	private Connection dbConn;
+	synchronized public void finishParallelProcessing() throws RF1ConversionException {
+		// When we stop running in parallel, we have to wait for all threads to catch up
+		debug("Ensuring all currently running processes complete...");
+		try {
+			executor.shutdown();
+			if (!executor.awaitTermination(20, TimeUnit.MINUTES)) {
+				throw new RF1ConversionException("Processing threads failed to complete within 5 minutes.");
+			}
+			parallelMode = false;
+			print("\nParallel tasks now all complete");
+		} catch (InterruptedException e) {
+			throw new RF1ConversionException("Processing threads interrupted while awaiting completion.");
+		}
+
+	}
 
 	public void init(File dbLocation) throws RF1ConversionException {
 		print("Initialising Database");
@@ -52,34 +75,30 @@ public class DBManager {
 			Class.forName(DB_DRIVER);
 			String dblocation = dbLocationParent.getPath() + File.separator + "rf2-to-rf1-conversion";
 			debug("Creating temporary data in folder: " + dblocation);
-			String dbConnectionStr = "jdbc:h2:" + dblocation;
+			String dbConnectionStr = "jdbc:h2:" + dblocation + DB_OPTIONS;
 			dbConn = DriverManager.getConnection(dbConnectionStr, DB_USER, DB_PASSWORD);
 		} catch (ClassNotFoundException | SQLException e) {
 			throw new RF1ConversionException("Failed to initialise in memory database", e);
 		}
 	}
 
-	public void executeResource(String resourceName, boolean multiPass) throws RF1ConversionException {
+	public void executeResource(String resourceName) throws RF1ConversionException {
 		try {
-			debug("\nExcecuting resource: " + resourceName + (multiPass ? " multiple Times." : ""));
+			debug("\nExcecuting resource: " + resourceName);
 			List<String> sqlStatements = loadSqlStatements(resourceName);
-			Long rowsUpdated = null;
 			for (String sql : sqlStatements) {
 				sql = sql.trim();
 				if (sql.length() > 0) {
 					if (sql.equals("-- PARALLEL_START")) {
-						parallelMode = true;
+						startParallelProcessing(3);
 					} else if (sql.equals("-- PARALLEL_END")) {
-						parallelMode = false;
+						finishParallelProcessing();
 					} else {
-						do {
-							rowsUpdated = executeSql(sql);
-							updateProgress();
-						} while (multiPass && rowsUpdated != null && rowsUpdated.longValue() > 0);
+						runStatement(sql);
 					}
 				}
 			}
-		} catch (IOException | RF1ConversionException e) {
+		} catch (IOException e) {
 			throw new RF1ConversionException("Failed to execute resource " + resourceName, e);
 		}
 	}
@@ -97,66 +116,10 @@ public class DBManager {
 	}
 
 	public void load(File file, String tableName) throws RF1ConversionException {
-		try {
 			debug("Loading data into " + tableName + " from " + file.getName());
 			// Field separator set to ASCII 21 = NAK to ensure double quotes (the default separator) are ignored
 			String sql = "INSERT INTO " + tableName + " SELECT * FROM CSVREAD('" + file.getPath() + "', null, 'UTF-8', chr(9), chr(21));";
-			executeSql(sql);
-			updateProgress();
-		} catch (RF1ConversionException e) {
-			throw new RF1ConversionException("Failed to load data into " + tableName, e);
-		}
-	}
-
-	public Long executeSql(String sql) throws RF1ConversionException {
-		try {
-			debug("Running: " + sql);
-			Long rowsUpdated = null;
-			long startTime = System.currentTimeMillis();
-			if (sql.startsWith("STOP")) {
-				throw new RF1ConversionException("Manually stated \"STOP\" encountered");
-			} else if (sql.startsWith("SELECT")) {
-				executeSelect(sql);
-			} else {
-				Statement stmt = dbConn.createStatement();
-				stmt.execute(sql);
-				if (sql.contains("INSERT") || sql.contains("UPDATE")) {
-					String elapsed = new DecimalFormat("#.##").format((System.currentTimeMillis() - startTime) / 1000.00d);
-					rowsUpdated = new Long(stmt.getUpdateCount());
-					debug("Rows updated: " + rowsUpdated + " in " + elapsed + " secs.");
-				}
-			}
-			updateProgress();
-			return rowsUpdated;
-		} catch (SQLException e) {
-			throw new RF1ConversionException("Failed to execute SQL Statement", e);
-		}
-	}
-
-	private void executeSelect(String sql) throws SQLException {
-		// Only need to do these if we're outputting verbose debug information
-		if (verbose) {
-			Statement stmt = dbConn.createStatement();
-			ResultSet rs = stmt.executeQuery(sql);
-			ResultSetMetaData md = rs.getMetaData();
-			int columnCount = md.getColumnCount();
-			String header = "";
-			for (int i=1; i <= columnCount; i++ ) {
-				header += md.getColumnLabel(i) + "\t";
-			}
-			print(header);
-			print(new String(new char[header.length()]).replace("\0", "="));
-
-			StringBuilder sb = new StringBuilder();
-			while (rs.next()) {
-				sb.setLength(0); // Empty the string
-				for (int i = 1; i <= columnCount; i++) {
-					sb.append(rs.getString(i)).append("\t");
-				}
-				print(sb.toString());
-			}
-		}
-		updateProgress();
+		runStatement(sql);
 	}
 
 	public void shutDown(boolean deleteFiles) throws RF1ConversionException {
@@ -188,6 +151,79 @@ public class DBManager {
 			updateProgress();
 		} catch (SQLException e) {
 			throw new RF1ConversionException("Failed to export data to file " + outputFilePath, e);
+		}
+	}
+	
+	public void runStatement(String sql) {
+		// Are we running this synchronously or in parallel?
+		if (parallelMode) {
+			Runnable asyncWorker = new StatementRunner(sql);
+			executor.execute(asyncWorker);
+		} else {
+			Runnable syncWorker = new StatementRunner(sql);
+			syncWorker.run();
+		}
+	}
+
+	public class StatementRunner implements Runnable {
+		private String sql;
+		
+		public StatementRunner (String sql) {
+			this.sql = sql;
+		}
+
+		public void run() {
+			// Only need to do these if we're outputting verbose debug information
+			try {
+				debug("Running: " + sql);
+				Long rowsUpdated = null;
+				long startTime = System.currentTimeMillis();
+				if (sql.startsWith("STOP")) {
+					throw new RuntimeException("Manually stated \"STOP\" encountered");
+				} else if (sql.startsWith("SELECT")) {
+					executeSelect();
+				} else {
+					Statement stmt = dbConn.createStatement();
+					stmt.execute(sql);
+					if (sql.contains("INSERT") || sql.contains("UPDATE")) {
+						String elapsed = new DecimalFormat("#.##").format((System.currentTimeMillis() - startTime) / 1000.00d);
+						rowsUpdated = new Long(stmt.getUpdateCount());
+						debug("Rows updated: " + rowsUpdated + " in " + elapsed + " secs.");
+					}
+				}
+				updateProgress();
+			} catch (SQLException e) {
+				throw new RuntimeException("Failed to execute SQL Statement", e);
+			}
+		}
+		
+		public void executeSelect() {
+			if (verbose) {
+				try{
+					Statement stmt = dbConn.createStatement();
+					ResultSet rs = stmt.executeQuery(sql);
+					ResultSetMetaData md = rs.getMetaData();
+					int columnCount = md.getColumnCount();
+					String header = "";
+					for (int i=1; i <= columnCount; i++ ) {
+						header += md.getColumnLabel(i) + "\t";
+					}
+					print(header);
+					print(new String(new char[header.length()]).replace("\0", "="));
+	
+					StringBuilder sb = new StringBuilder();
+					while (rs.next()) {
+						sb.setLength(0); // Empty the string
+						for (int i = 1; i <= columnCount; i++) {
+							sb.append(rs.getString(i)).append("\t");
+						}
+						print(sb.toString());
+					}
+				} catch (Exception e) {
+					print("Exception during select statement: " + sql + " - " + e.getMessage());
+				}
+			}
+			updateProgress();
 		}
 	}
 

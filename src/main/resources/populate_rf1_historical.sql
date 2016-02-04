@@ -1,3 +1,4 @@
+-- PARALLEL_START;
 -- Insert all concept changes into history and we'll work out what changes where made
 -- in a subsequent pass.
 INSERT INTO rf21_COMPONENTHISTORY
@@ -15,7 +16,8 @@ SELECT t.id, t.effectiveTime, 'X', 'X', '', FALSE,
 	AND t2.effectiveTime < t.effectiveTime
 )
 FROM rf2_term_sv t;
-
+-- PARALLEL_END;
+-- PARALLEL_START;
 -- Update concepts where the active status has changed
 UPDATE rf21_COMPONENTHISTORY ch
 SET CHANGETYPE=1,
@@ -48,6 +50,7 @@ WHERE EXISTS (
 	AND t2.effectiveTime = ch.releaseVersion
 	AND t3.effectiveTime = ch.previous_Version
 	AND t2.active != t3.active
-)
+) -- Where an FSN has been made inactive, add that as a change to the concept
 AND ch.IS_CONCEPT = FALSE;
--- Where an FSN has been made inactive, add that as a change to the concept
+
+-- PARALLEL_END;

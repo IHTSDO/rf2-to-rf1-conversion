@@ -93,13 +93,11 @@ public class ConversionManager {
 
 			print("\nLoading RF2 Data...");
 			cm.releaseDate = findDateInString(loadingArea.listFiles()[0].getName(), false);
-			// We can do the load in parallel
-			cm.db.setParallelMode(true);
+
 			cm.loadRF2Data(loadingArea);
-			cm.db.setParallelMode(false);
 
 			debug("\nCreating RF2 indexes...");
-			cm.db.executeResource("create_rf2_indexes.sql", false);
+			cm.db.executeResource("create_rf2_indexes.sql");
 
 			print("\nCalculating RF2 snapshot...");
 			cm.calculateRF2Snapshot();
@@ -115,7 +113,8 @@ public class ConversionManager {
 
 			completionStatus = "completed";
 		} finally {
-			print("Process " + completionStatus + " in " + stopwatch + " after " + getProgress() + " operations.");
+			print("\nProcess " + completionStatus + " in " + stopwatch + " after completing " + getProgress() + "/" + getMaxOperations()
+					+ " operations.");
 			print("Cleaning up resources...");
 			try {
 				cm.db.shutDown(true); // Also deletes all files
@@ -148,20 +147,20 @@ public class ConversionManager {
 
 	private void createDatabaseSchema() throws RF1ConversionException {
 		print("Creating database schema");
-		db.executeResource("create_rf2_schema.sql", false);
+		db.executeResource("create_rf2_schema.sql");
 	}
 
 	private void calculateRF2Snapshot() throws RF1ConversionException {
 		String setDateSql = "SET @RDATE = " + releaseDate;
-		db.executeSql(setDateSql);
-		db.executeResource("create_rf2_snapshot.sql", false);
-		db.executeResource("populate_subset_2_refset.sql", false);
+		db.runStatement(setDateSql);
+		db.executeResource("create_rf2_snapshot.sql");
+		db.executeResource("populate_subset_2_refset.sql");
 	}
 
 	private void convert() throws RF1ConversionException {
-		db.executeResource("create_rf1_schema.sql", false);
-		db.executeResource("populate_rf1_historical.sql", false);
-		db.executeResource("populate_rf1.sql", false);
+		db.executeResource("create_rf1_schema.sql");
+		db.executeResource("populate_rf1_historical.sql");
+		db.executeResource("populate_rf1.sql");
 	}
 
 	private void init(String[] args, File dbLocation) throws RF1ConversionException {
@@ -191,23 +190,28 @@ public class ConversionManager {
 	}
 
 	private void loadRF2Data(File loadingArea) throws RF1ConversionException {
-
+		// We can do the load in parallel. Only 3 threads because heavily I/O
+		db.startParallelProcessing(3);
 		for (Map.Entry<String, String> entry : fileToTable.entrySet()) {
 			// Replace DATE in the filename with the actual release date
 			String fileName = entry.getKey().replace("DATE", releaseDate);
 			File file = new File(loadingArea + File.separator + fileName);
 			db.load(file, entry.getValue());
 		}
+		db.finishParallelProcessing();
 	}
 
 	private File exportRF1Data() throws RF1ConversionException {
 		File tempExportLocation = Files.createTempDir();
+		// We can do the export in parallel. Only 3 threads because heavily I/O
+		db.startParallelProcessing(3);
 		for (Map.Entry<String, String> entry : exportMap.entrySet()) {
 			// Replace DATE in the filename with the actual release date
 			String fileName = entry.getKey().replace("DATE", releaseDate);
 			String filePath = tempExportLocation + "/" + fileName;
 			db.export(filePath, entry.getValue());
 		}
+		db.finishParallelProcessing();
 		return tempExportLocation;
 	}
 

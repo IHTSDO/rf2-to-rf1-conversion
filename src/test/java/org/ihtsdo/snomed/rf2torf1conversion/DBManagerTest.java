@@ -22,7 +22,7 @@ public class DBManagerTest {
 
 	@Test
 	public void executeResourceTest() throws RF1ConversionException {
-		db.executeResource("test_scripts.sql", false);
+		db.executeResource("test_scripts.sql");
 	}
 
 	@After

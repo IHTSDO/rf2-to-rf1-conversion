@@ -1,5 +1,3 @@
-
-
 INSERT INTO rf21_concept
 SELECT DISTINCT
   id AS CONCEPTID,
@@ -18,9 +16,18 @@ WHERE NOT EXISTS (
 	AND t.term like '%metadata concept)'
 );
 
+CREATE UNIQUE INDEX CONCEPT_CUI_X ON rf21_concept(CONCEPTID);
+
 SET @FullySpecifiedName = '900000000000003001';
 SET @Definition = '900000000000550004';
 SET @EntireTermCaseSensitive = '900000000000017005';
+SET @Stated = '900000000000010007';
+SET @USRefSet = '900000000000509007'; /* United States of America English language reference set  */
+SET @GBRefSet = '900000000000508004'; /* Great Britain English language reference set (foundation metadata concept) */
+SET @Acceptable = '900000000000549004';
+SET @Preferred = '900000000000548007';
+
+-- PARALLEL_START;
 
 SELECT typeid, count(*)
 from rf2_term
@@ -40,7 +47,6 @@ SELECT
 FROM rf2_term t, rf21_concept c
 WHERE t.conceptid = c.conceptid;
 
-
 INSERT INTO rf21_def
 SELECT
   conceptId AS CONCEPTID,
@@ -49,27 +55,29 @@ SELECT
   term AS TERM
 FROM rf2_def WHERE active = 1;
 
-SET @Stated = '900000000000010007';
 INSERT INTO rf21_rel
 SELECT
   null AS RELATIONSHIPID,
-  sourceId AS CONCEPTID1,
-  typeId AS RELATIONSHIPTYPE,
-  destinationId AS CONCEPTD2,
-  characteristicFor(characteristicTypeId) AS CHARACTERISTICTYPE,
+  r.sourceId AS CONCEPTID1,
+  r.typeId AS RELATIONSHIPTYPE,
+  r.destinationId AS CONCEPTD2,
+  r.characteristicFor(characteristicTypeId) AS CHARACTERISTICTYPE,
   9 AS REFINABILITY, -- default 3 to signify refinability not known
-  relationshipGroup AS RELATIONSHIPGROUP,
-  moduleSourceFor(moduleId) AS SOURCE
-FROM rf2_rel WHERE characteristicTypeId <> @Stated; /* Ignore stated relationships */
-
-CREATE UNIQUE INDEX CONCEPT_CUI_X ON rf21_concept(CONCEPTID);
+  r.relationshipGroup AS RELATIONSHIPGROUP,
+  r.moduleSourceFor(moduleId) AS SOURCE
+FROM rf2_rel r, rf21_concept c1, rf21_concept c2  /*Only relationships for concepts that exist in RF1*/
+WHERE characteristicTypeId <> @Stated /* Ignore stated relationships */
+AND r.sourceId = c1.conceptid
+AND r.destinationId = c2.conceptid;
+-- PARALLEL_END;
+-- PARALLEL_START;
 CREATE INDEX TERM_CUI_X ON rf21_term(CONCEPTID);
 CREATE UNIQUE INDEX TERM_TUI_X ON rf21_term(DESCRIPTIONID);
 CREATE INDEX IDX_REL_CUI1_X ON rf21_rel(CONCEPTID1);
 CREATE INDEX IDX_REL_RELATION_X ON rf21_rel(RELATIONSHIPTYPE);
 CREATE INDEX IDX_REL_CUI2_X ON rf21_rel(CONCEPTID2);
-
--- Very unpleasant workaround in H2 for lack of join with update
+-- PARALLEL_END;
+-- PARALLEL_START;
 
 /* Concepts in the FULL tables but NOT in the snapshot must be EITHER some flavour of inactive OR pending move 
    Determine the reason for inactivation, or pending move status, from the appropriate refset
@@ -95,14 +103,7 @@ where c.CONCEPTID in (
 	and s3.active = 1
 	and s3.referencedComponentId = c.CONCEPTID);
 
-SELECT count(*) as rowCount from rf2_srefset s;
 
-SELECT * from rf2_srefset s where s.linkedString is null;
-
-SELECT c.* from rf21_concept c LEFT JOIN rf2_srefset s
-ON c.conceptid = s.referencedComponentId
-AND s.refSetId = '900000000000497000'
-WHERE s.referencedComponentId is null;
 
 -- Currently missing legacy values for GMDN Reference Set Concept.  Merge in if required.
 MERGE INTO rf2_srefset (id, effectiveTime, active, moduleId, refSetId, referencedComponentId, linkedString)
@@ -127,8 +128,6 @@ where c.conceptid = s.referencedComponentId
 and s.refSetId ='900000000000498005'
 );
 
-SELECT DESCRIPTIONSTATUS, count(*) from rf21_term group by DESCRIPTIONSTATUS;
-
 --Where term is has inactivation reason, set the description status
 UPDATE rf21_term t
 SET t.DESCRIPTIONSTATUS = COALESCE (
@@ -137,7 +136,8 @@ SET t.DESCRIPTIONSTATUS = COALESCE (
 	where s.referencedComponentId = t.descriptionid
 	and s.refSetId ='900000000000490003' 
 	AND s.active = 1),t.descriptionstatus);
-	
+-- PARALLEL_END;
+-- PARALLEL_START;	
 -- Where the concept has limited status (6), the description should too
 UPDATE rf21_term t
 SET t.DESCRIPTIONSTATUS = 6
@@ -147,8 +147,6 @@ WHERE EXISTS (
 	AND c.conceptstatus = 6 )
 AND t.DESCRIPTIONSTATUS = 8;
 
-SELECT DESCRIPTIONSTATUS, count(*) from rf21_term group by DESCRIPTIONSTATUS;
-
 UPDATE rf21_concept c
 SET c.FULLYSPECIFIEDNAME = ( 
 	select t.term from rf21_term t
@@ -156,10 +154,9 @@ SET c.FULLYSPECIFIEDNAME = (
 	and t.US_DESC_TYPE = 3 
 	and t.DESCRIPTIONSTATUS IN (0,6,8,11));
 
-SET @USRefSet = '900000000000509007'; /* United States of America English language reference set  */
-SET @GBRefSet = '900000000000508004'; /* Great Britain English language reference set (foundation metadata concept) */
-
 UPDATE rf21_term SET LANGUAGECODE = 'en';
+-- PARALLEL_END;
+-- PARALLEL_START;
 -- Set language code as en-GB when no en-US row exists and visa versa
 UPDATE rf21_term t
 SET t.LANGUAGECODE = 'en-GB'
@@ -186,15 +183,6 @@ WHERE EXISTS (
 	-- Seems to be an oddity in Termmed's conversion that they'd set en-GB but not an en-US
 	-- when the description is inactive
 ) AND NOT t.DESCRIPTIONSTATUS = 1;
-
-SELECT t.LANGUAGECODE, count(*)
-from rf21_term t
-group by t.LANGUAGECODE;
-
-SET @Acceptable = '900000000000549004';
-SET @Preferred = '900000000000548007';
-SET @USRefSet = '900000000000509007'; /* United States of America English language reference set  */
-SET @GBRefSet = '900000000000508004'; /* Great Britain English language reference set (foundation metadata concept) */
 
 -- Description types were set to synonym by default, then FSN were picked up, so now just detect preferred for each language
 UPDATE rf21_term t
@@ -243,6 +231,7 @@ d.SNOMEDID = (
 	
 UPDATE rf21_rel r
 SET r.REFINABILITY = refinabilityFor(r.characteristicType);
+-- PARALLEL_END;
 
 SET @HistoricalAttribute = '10363501000001105'; /* HAD AMP */
 SET @Refset = '999001311000000107';	/* Had actual medicinal product association reference set (foundation metadata concept) */
@@ -273,7 +262,11 @@ AND s.active = 1;
 SET @HistoricalAttribute = '149016008'; /*  MAY BE A */
 SET @Refset = '900000000000523009';	/* POSSIBLY EQUIVALENT TO association reference set (foundation metadata concept) */
 SET @RefType = 3;  /*Similar to ?*/
-INSERT INTO rf21_rel SELECT null, s.referencedComponentId, @HistoricalAttribute, linkedComponentID, 2,0,0,'RF2' FROM rf2_cRefSet s WHERE s.RefSetId = @Refset;
+INSERT INTO rf21_rel SELECT null, s.referencedComponentId, @HistoricalAttribute, linkedComponentID, 2,0,0,'RF2' 
+FROM rf2_cRefSet s 
+WHERE s.RefSetId = @Refset
+AND s.active = 1;
+
 INSERT INTO rf21_reference SELECT s.referencedComponentId, @RefType, linkedComponentID 
 FROM rf2_cRefSet s 
 WHERE s.RefSetId = @Refset
@@ -282,7 +275,17 @@ AND s.active = 1;
 SET @HistoricalAttribute = '370124000'; /* REPLACED_BY */
 SET @Refset = '900000000000526001';	/* 'REPLACED BY association reference set (foundation metadata concept)' */
 SET @RefType = 1; 
-INSERT INTO rf21_rel SELECT null, s.referencedComponentId, @HistoricalAttribute, linkedComponentID, 2,0,0,'RF2' FROM rf2_cRefSet s WHERE s.RefSetId = @Refset;
+-- But not when a "MOVED TO" row also exists for this component (null on the left join)
+INSERT INTO rf21_rel SELECT null, rep.referencedComponentId, @HistoricalAttribute, rep.linkedComponentID, 2,0,0,'RF2' 
+FROM rf2_cRefSet rep LEFT JOIN rf2_cRefSet mvd 
+	ON rep.referencedComponentId = mvd.referencedComponentId 
+	AND mvd.RefsetId =  '900000000000524003' -- MOVED TO
+	AND mvd.active = 1
+WHERE rep.RefSetId = @Refset
+AND s.active = 1
+AND mvd.linkedComponentID is null;
+
+
 INSERT INTO rf21_reference SELECT s.referencedComponentId, @RefType, linkedComponentID 
 FROM rf2_cRefSet s 
 WHERE s.RefSetId = @Refset
@@ -291,7 +294,10 @@ AND s.active = 1;
 SET @HistoricalAttribute = '168666000'; /* SAME_AS */
 SET @Refset = '900000000000527005';	/* 'SAME AS association reference set (foundation metadata concept)' */
 SET @RefType = 2; /*Duplicated By*/
-INSERT INTO rf21_rel SELECT null, s.referencedComponentId, @HistoricalAttribute, linkedComponentID, 2,0,0,'RF2' FROM rf2_cRefSet s WHERE s.RefSetId = @Refset;
+INSERT INTO rf21_rel SELECT null, s.referencedComponentId, @HistoricalAttribute, linkedComponentID, 2,0,0,'RF2' 
+FROM rf2_cRefSet s 
+WHERE s.RefSetId = @Refset
+AND s.active = 1;
 INSERT INTO rf21_reference SELECT s.referencedComponentId, @RefType, linkedComponentID 
 FROM rf2_cRefSet s 
 WHERE s.RefSetId = @Refset
@@ -299,7 +305,10 @@ AND s.active = 1;
 
 SET @HistoricalAttribute = '159083000'; /* WAS A */
 SET @Refset = '900000000000528000';	/* WAS A association reference set (foundation metadata concept) */
-INSERT INTO rf21_rel SELECT null, s.referencedComponentId, @HistoricalAttribute, linkedComponentID, 2,0,0,'RF2' FROM rf2_cRefSet s WHERE s.RefSetId = @Refset;
+INSERT INTO rf21_rel SELECT null, s.referencedComponentId, @HistoricalAttribute, linkedComponentID, 2,0,0,'RF2' 
+FROM rf2_cRefSet s 
+WHERE s.RefSetId = @Refset
+AND s.active = 1;
 
 
 SET @InactiveParent = '363661006'; /* Reason not stated */
