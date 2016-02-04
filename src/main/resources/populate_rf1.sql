@@ -69,13 +69,46 @@ FROM rf2_rel r, rf21_concept c1, rf21_concept c2  /*Only relationships for conce
 WHERE characteristicTypeId <> @Stated /* Ignore stated relationships */
 AND r.sourceId = c1.conceptid
 AND r.destinationId = c2.conceptid;
+
 -- PARALLEL_END;
 -- PARALLEL_START;
+
+-- The Snomed CT Model Component 900000000000441003 doesn't exist in RF1 so we're 
+-- going to remove it and point its children to other parents.
+SET @SCT_MODEL = '900000000000441003';
+SET @SCT_ROOT  = '138875005';
+SET @SCT_SPECIAL = '370115009';
+SET @SCT_LINKAGE = '106237007';
+SET @SCT_NAMESPACE = '370136006';
+SET @SCT_IS_A = '116680003';
+
+DELETE from rf21_concept where conceptid = @SCT_MODEL;
+DELETE from rf21_term where conceptid = @SCT_MODEL;
+DELETE from rf21_rel where conceptid1 = @SCT_MODEL;
+
+UPDATE rf21_rel SET conceptid2 = @SCT_ROOT
+WHERE conceptid1 =  @SCT_LINKAGE
+AND relationshiptype = @SCT_IS_A;
+
+UPDATE rf21_rel SET conceptid2 = @SCT_SPECIAL
+WHERE conceptid1 =  @SCT_NAMESPACE
+AND relationshiptype = @SCT_IS_A;
+
 CREATE INDEX TERM_CUI_X ON rf21_term(CONCEPTID);
 CREATE UNIQUE INDEX TERM_TUI_X ON rf21_term(DESCRIPTIONID);
 CREATE INDEX IDX_REL_CUI1_X ON rf21_rel(CONCEPTID1);
 CREATE INDEX IDX_REL_RELATION_X ON rf21_rel(RELATIONSHIPTYPE);
 CREATE INDEX IDX_REL_CUI2_X ON rf21_rel(CONCEPTID2);
+
+-- Currently missing legacy values for GMDN Reference Set Concept.  Merge in if required.
+MERGE INTO rf2_srefset (id, effectiveTime, active, moduleId, refSetId, referencedComponentId, linkedString)
+KEY (referencedComponentId, refsetId)
+Values ('DUMMY', '00000000', 1, 900000000000207008, 900000000000497000, 467614008, 'XUozI' );
+
+MERGE INTO rf2_srefset (id, effectiveTime, active, moduleId, refSetId, referencedComponentId, linkedString)
+KEY (referencedComponentId, refsetId)
+Values ('DUMMY', '00000000', 1, 900000000000207008, 900000000000498005, 467614008, 'R-FD64C' );
+
 -- PARALLEL_END;
 -- PARALLEL_START;
 
@@ -103,17 +136,6 @@ where c.CONCEPTID in (
 	and s3.active = 1
 	and s3.referencedComponentId = c.CONCEPTID);
 
-
-
--- Currently missing legacy values for GMDN Reference Set Concept.  Merge in if required.
-MERGE INTO rf2_srefset (id, effectiveTime, active, moduleId, refSetId, referencedComponentId, linkedString)
-KEY (referencedComponentId, refsetId)
-Values ('DUMMY', '00000000', 1, 900000000000207008, 900000000000497000, 467614008, 'XUozI' );
-
-MERGE INTO rf2_srefset (id, effectiveTime, active, moduleId, refSetId, referencedComponentId, linkedString)
-KEY (referencedComponentId, refsetId)
-Values ('DUMMY', '00000000', 1, 900000000000207008, 900000000000498005, 467614008, 'R-FD64C' );
-	
  -- CTV3
 UPDATE rf21_concept c
 SET c.CTV3ID = (
@@ -244,7 +266,11 @@ INSERT INTO rf21_rel SELECT  null, s.referencedComponentId, @HistoricalAttribute
 SET @HistoricalAttribute = '384598002'; /* MOVED FROM */
 SET @Refset = '900000000000525002';	/* MOVED FROM association reference set (foundation metadata concept) */
 SET @RefType = 6;
-INSERT INTO rf21_rel SELECT null, s.referencedComponentId, @HistoricalAttribute, linkedComponentID, 2,0,0,'RF2' FROM rf2_cRefSet s WHERE s.RefSetId = @Refset;
+INSERT INTO rf21_rel SELECT null, s.referencedComponentId, @HistoricalAttribute, linkedComponentID, 2,0,0,'RF2' 
+FROM rf2_cRefSet s 
+WHERE s.RefSetId = @Refset;
+AND s.active = 1;
+
 INSERT INTO rf21_reference SELECT s.referencedComponentId, @RefType, linkedComponentID 
 FROM rf2_cRefSet s 
 WHERE s.RefSetId = @Refset
@@ -253,7 +279,11 @@ AND s.active = 1;
 SET @HistoricalAttribute = '370125004';    /* MOVED TO */
 SET @Refset = '900000000000524003';	/* MOVED TO association reference set (foundation metadata concept) */
 SET @RefType = 5;
-INSERT INTO rf21_rel SELECT null, s.referencedComponentId, @HistoricalAttribute, linkedComponentID, 2,0,0,'RF2' FROM rf2_cRefSet s WHERE s.RefSetId = @Refset;
+INSERT INTO rf21_rel SELECT null, s.referencedComponentId, @HistoricalAttribute, linkedComponentID, 2,0,0,'RF2' 
+FROM rf2_cRefSet s 
+WHERE s.RefSetId = @Refset
+and s.active = 1;
+
 INSERT INTO rf21_reference SELECT s.referencedComponentId, @RefType, linkedComponentID 
 FROM rf2_cRefSet s 
 WHERE s.RefSetId = @Refset
@@ -282,7 +312,7 @@ FROM rf2_cRefSet rep LEFT JOIN rf2_cRefSet mvd
 	AND mvd.RefsetId =  '900000000000524003' -- MOVED TO
 	AND mvd.active = 1
 WHERE rep.RefSetId = @Refset
-AND s.active = 1
+AND rep.active = 1
 AND mvd.linkedComponentID is null;
 
 
@@ -331,6 +361,10 @@ INSERT INTO rf21_rel SELECT  null, c.CONCEPTID, '116680003', @InactiveParent, 0,
 
 SET @InactiveParent = '370126003'; /* Moved elsewhere */
 INSERT INTO rf21_rel SELECT  null, c.CONCEPTID, '116680003', @InactiveParent, 0,0,0,c.SOURCE FROM rf21_concept c WHERE c.CONCEPTSTATUS = 10;
+
+SELECT count(*) FROM rf2_crefset s 
+	INNER JOIN rf2_subset2refset m 
+		ON s.refsetId = m.refsetId;
 
 INSERT INTO rf21_subsetlist SELECT DISTINCT 
 	@RDATE || CASE WHEN m.refsetId = 900000000000508004 THEN '2' ELSE '1' END AS SubsetID, 

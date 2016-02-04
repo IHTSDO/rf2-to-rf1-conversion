@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -18,6 +17,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.h2.jdbcx.JdbcConnectionPool;
+
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 
@@ -25,44 +26,37 @@ public class DBManager {
 
 	private static final String DB_DRIVER = "org.h2.Driver";
 	private static final String DB_OPTIONS = "MULTI_THREADED=1;LOG=0;CACHE_SIZE=65536;LOCK_MODE=3";
+	private static final String DEFAULT_FILE_SEPARATOR = "/";
+	private static final String SQL_DELIMITER = ";";
+
 	// In Memory Database fails when we try to load in the full relationship file
 	// private static final String DB_CONNECTION = "jdbc:h2:mem:rf1_conversion;DB_CLOSE_DELAY=-1";
 	private static final String DB_USER = "";
 	private static final String DB_PASSWORD = "";
 
-	private static final String DELIMITER_SEQUENCE = "DELIMITER $$";
-	private static final String DELIMITER_RESET = "DELIMITER ;";
-	private static final String DEFAULT_FILE_SEPARATOR = "/";
-
 	private ExecutorService executor = null;
-
 	private boolean parallelMode = false;
-
-	private Connection dbConn;
+	private JdbcConnectionPool dbPool = null;
+	private boolean failureDetected = false;
 
 	synchronized public void startParallelProcessing(int threadCount) throws RF1ConversionException {
-		if (parallelMode == true) {
-			throw new RF1ConversionException("Cannot start parallel processing while existing parallel processes exist.");
-		}
-		print("\nStarting Parallel Processing");
-		parallelMode = true;
-		executor = Executors.newFixedThreadPool(threadCount);
+		/*
+		 * if (parallelMode == true) { throw new
+		 * RF1ConversionException("Cannot start parallel processing while existing parallel processes exist."); }
+		 * print("\nStarting Parallel Processing"); parallelMode = true; executor = Executors.newFixedThreadPool(threadCount);
+		 */
 	}
 
 	synchronized public void finishParallelProcessing() throws RF1ConversionException {
 		// When we stop running in parallel, we have to wait for all threads to catch up
-		debug("Ensuring all currently running processes complete...");
-		try {
-			executor.shutdown();
-			if (!executor.awaitTermination(20, TimeUnit.MINUTES)) {
-				throw new RF1ConversionException("Processing threads failed to complete within 5 minutes.");
-			}
-			parallelMode = false;
-			print("\nParallel tasks now all complete");
-		} catch (InterruptedException e) {
-			throw new RF1ConversionException("Processing threads interrupted while awaiting completion.");
-		}
-
+		/*
+		 * debug("Ensuring all currently running processes complete..."); try { executor.shutdown(); if (!executor.awaitTermination(20,
+		 * TimeUnit.MINUTES)) { throw new RF1ConversionException("Processing threads failed to complete within 5 minutes."); }
+		 * 
+		 * if (failureDetected) { throw new RF1ConversionException("Failure detected in one or more processing threads."); } parallelMode =
+		 * false; print("\nParallel tasks now all complete"); } catch (InterruptedException e) { throw new
+		 * RF1ConversionException("Processing threads interrupted while awaiting completion."); }
+		 */
 	}
 
 	public void init(File dbLocation) throws RF1ConversionException {
@@ -76,8 +70,8 @@ public class DBManager {
 			String dblocation = dbLocationParent.getPath() + File.separator + "rf2-to-rf1-conversion";
 			debug("Creating temporary data in folder: " + dblocation);
 			String dbConnectionStr = "jdbc:h2:" + dblocation + DB_OPTIONS;
-			dbConn = DriverManager.getConnection(dbConnectionStr, DB_USER, DB_PASSWORD);
-		} catch (ClassNotFoundException | SQLException e) {
+			dbPool = JdbcConnectionPool.create(dbConnectionStr, DB_USER, DB_PASSWORD);
+		} catch (ClassNotFoundException e) {
 			throw new RF1ConversionException("Failed to initialise in memory database", e);
 		}
 	}
@@ -106,13 +100,7 @@ public class DBManager {
 	private List<String> loadSqlStatements(String resourceName) throws IOException {
 		URL url = Resources.getResource(resourceName);
 		String text = Resources.toString(url, Charsets.UTF_8);
-		String delimiter = ";";
-		if (text.contains(DELIMITER_SEQUENCE)) {
-			text = text.replace(DELIMITER_SEQUENCE, "");
-			text = text.replace(DELIMITER_RESET, "");
-			delimiter = "\\$\\$";
-		}
-		return Arrays.asList(text.split(delimiter));
+		return Arrays.asList(text.split(SQL_DELIMITER));
 	}
 
 	public void load(File file, String tableName) throws RF1ConversionException {
@@ -123,18 +111,14 @@ public class DBManager {
 	}
 
 	public void shutDown(boolean deleteFiles) throws RF1ConversionException {
-		try {
 			if (deleteFiles) {
-				dbConn.createStatement().execute("DROP ALL OBJECTS DELETE FILES");
+				runStatement("DROP ALL OBJECTS DELETE FILES");
 			}
-			dbConn.createStatement().execute("SHUTDOWN");
-		} catch (SQLException e) {
-			throw new RF1ConversionException("Failed to shutdown database");
-		}
+			runStatement("SHUTDOWN");
+			dbPool.dispose();
 	}
 
 	public void export(String outputFilePath, String selectionSql) throws RF1ConversionException {
-		try {
 			// Make the path separator compatible with the OS
 			outputFilePath = outputFilePath.replace(DEFAULT_FILE_SEPARATOR, File.separator);
 
@@ -147,11 +131,7 @@ public class DBManager {
 			// Use Windows line terminators, tab field separator and no delimiter (double quote by default)
 			String sql = "CALL CSVWRITE('" + outputFile.getPath() + "', '" + selectionSql + "',"
 					+ "'charset=UTF-8 lineSeparator=' || CHAR(13) || CHAR(10) ||' fieldSeparator=' || CHAR(9) || ' fieldDelimiter= escape=');";
-			dbConn.createStatement().execute(sql);
-			updateProgress();
-		} catch (SQLException e) {
-			throw new RF1ConversionException("Failed to export data to file " + outputFilePath, e);
-		}
+			runStatement(sql);
 	}
 	
 	public void runStatement(String sql) {
@@ -183,16 +163,19 @@ public class DBManager {
 				} else if (sql.startsWith("SELECT")) {
 					executeSelect();
 				} else {
-					Statement stmt = dbConn.createStatement();
+					Connection conn = dbPool.getConnection();
+					Statement stmt = conn.createStatement();
 					stmt.execute(sql);
 					if (sql.contains("INSERT") || sql.contains("UPDATE")) {
 						String elapsed = new DecimalFormat("#.##").format((System.currentTimeMillis() - startTime) / 1000.00d);
 						rowsUpdated = new Long(stmt.getUpdateCount());
 						debug("Rows updated: " + rowsUpdated + " in " + elapsed + " secs.");
 					}
+					conn.close();
 				}
 				updateProgress();
 			} catch (SQLException e) {
+				failureDetected = true;
 				throw new RuntimeException("Failed to execute SQL Statement", e);
 			}
 		}
@@ -200,7 +183,8 @@ public class DBManager {
 		public void executeSelect() {
 			if (verbose) {
 				try{
-					Statement stmt = dbConn.createStatement();
+					Connection conn = dbPool.getConnection();
+					Statement stmt = conn.createStatement();
 					ResultSet rs = stmt.executeQuery(sql);
 					ResultSetMetaData md = rs.getMetaData();
 					int columnCount = md.getColumnCount();
@@ -219,6 +203,7 @@ public class DBManager {
 						}
 						print(sb.toString());
 					}
+					conn.close();
 				} catch (Exception e) {
 					print("Exception during select statement: " + sql + " - " + e.getMessage());
 				}
