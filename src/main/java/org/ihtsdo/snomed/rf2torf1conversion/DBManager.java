@@ -166,7 +166,7 @@ public class DBManager {
 					Connection conn = dbPool.getConnection();
 					Statement stmt = conn.createStatement();
 					stmt.execute(sql);
-					if (sql.contains("INSERT") || sql.contains("UPDATE")) {
+					if (sql.contains("INSERT") || sql.contains("UPDATE") || sql.contains("DELETE")) {
 						String elapsed = new DecimalFormat("#.##").format((System.currentTimeMillis() - startTime) / 1000.00d);
 						rowsUpdated = new Long(stmt.getUpdateCount());
 						debug("Rows updated: " + rowsUpdated + " in " + elapsed + " secs.");

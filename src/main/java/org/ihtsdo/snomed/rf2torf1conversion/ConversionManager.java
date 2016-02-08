@@ -63,12 +63,12 @@ public class ConversionManager {
 				"select COMPONENTID, REFERENCETYPE, REFERENCEDID from rf21_REFERENCE");
 		exportMap
 				.put("SnomedCT_RF1Release_INT_DATE/Subsets/Language-en-GB/der1_SubsetMembers_en-GB_INT_DATE.txt",
-						"select s.* from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.subsetid = sl.subsetid AND sl.languageCode in (''en'',''en-GB'')");
+						"select s.* from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.subsetid = sl.subsetOriginalId AND sl.languageCode in (''en'',''en-GB'')");
 		exportMap.put("SnomedCT_RF1Release_INT_DATE/Subsets/Language-en-GB/der1_Subsets_en-GB_INT_DATE.txt",
 				"select sl.* from rf21_SUBSETLIST sl where languagecode like ''%GB%''");
 		exportMap
 				.put("SnomedCT_RF1Release_INT_DATE/Subsets/Language-en-US/der1_SubsetMembers_en-US_INT_DATE.txt",
-						"select s.* from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.subsetid = sl.subsetid AND sl.languageCode in (''en'',''en-US'')");
+						"select s.* from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.subsetid = sl.subsetOriginalId AND sl.languageCode in (''en'',''en-US'')");
 		exportMap.put("SnomedCT_RF1Release_INT_DATE/Subsets/Language-en-US/der1_Subsets_en-US_INT_DATE.txt",
 				"select sl.* from rf21_SUBSETLIST sl where languagecode like ''%US%''");
 		// exportMap.put("rf21_XMAPLIST");

@@ -18,11 +18,30 @@ WHERE s.effectiveTime =
   (SELECT MAX(sv.effectiveTime) AS LatestDate FROM rf2_def_sv AS sv
    WHERE sv.id=s.id AND sv.effectiveTime <= @RDATE);
 
+-- There is a case of an id existing in both stated and inferred,
+-- so match on characeristicId as well
 INSERT INTO rf2_rel
 SELECT * FROM rf2_rel_sv s
 WHERE s.active = 1 AND s.effectiveTime =
   (SELECT MAX(sv.effectiveTime) AS LatestDate FROM rf2_rel_sv AS sv
-   WHERE sv.id=s.id AND sv.effectiveTime <= @RDATE);
+   WHERE sv.id=s.id 
+   AND sv.effectiveTime <= @RDATE
+    -- However, we need to filter out the inferred relationships from 2002 that became
+    -- addtional in 2005
+    AND (sv.characteristicTypeId = s.characteristicTypeId OR sv.effectiveTime <= 20050131)
+   );
+
+SELECT * FROM rf2_rel_sv s
+WHERE s.active = 1 
+AND s.sourceid = 425630003
+AND relationshipgroup = 0
+AND s.effectiveTime =
+  (SELECT MAX(sv.effectiveTime) AS LatestDate FROM rf2_rel_sv AS sv
+   WHERE sv.id=s.id AND sv.effectiveTime <= 20160131);
+   
+SELECT * from rf2_rel r
+where r.sourceid = 425630003
+AND relationshipgroup = 0;
 
 INSERT INTO rf2_identifier
 SELECT * FROM rf2_identifier_sv s

@@ -55,6 +55,10 @@ SELECT
   term AS TERM
 FROM rf2_def WHERE active = 1;
 
+SELECT * from rf2_rel
+WHERE sourceid = 425630003
+AND relationshipgroup = 0;
+
 INSERT INTO rf21_rel
 SELECT
   null AS RELATIONSHIPID,
@@ -62,13 +66,17 @@ SELECT
   r.typeId AS RELATIONSHIPTYPE,
   r.destinationId AS CONCEPTD2,
   r.characteristicFor(characteristicTypeId) AS CHARACTERISTICTYPE,
-  9 AS REFINABILITY, -- default 3 to signify refinability not known
+  9 AS REFINABILITY, -- default 9 to signify refinability not known
   r.relationshipGroup AS RELATIONSHIPGROUP,
   r.moduleSourceFor(moduleId) AS SOURCE
 FROM rf2_rel r, rf21_concept c1, rf21_concept c2  /*Only relationships for concepts that exist in RF1*/
 WHERE characteristicTypeId <> @Stated /* Ignore stated relationships */
 AND r.sourceId = c1.conceptid
 AND r.destinationId = c2.conceptid;
+
+SELECT * from rf21_rel
+WHERE conceptid1 = 425630003
+AND relationshipgroup = 0;
 
 -- PARALLEL_END;
 -- PARALLEL_START;
@@ -268,7 +276,7 @@ SET @Refset = '900000000000525002';	/* MOVED FROM association reference set (fou
 SET @RefType = 6;
 INSERT INTO rf21_rel SELECT null, s.referencedComponentId, @HistoricalAttribute, linkedComponentID, 2,0,0,'RF2' 
 FROM rf2_cRefSet s 
-WHERE s.RefSetId = @Refset;
+WHERE s.RefSetId = @Refset
 AND s.active = 1;
 
 INSERT INTO rf21_reference SELECT s.referencedComponentId, @RefType, linkedComponentID 
@@ -328,6 +336,7 @@ INSERT INTO rf21_rel SELECT null, s.referencedComponentId, @HistoricalAttribute,
 FROM rf2_cRefSet s 
 WHERE s.RefSetId = @Refset
 AND s.active = 1;
+
 INSERT INTO rf21_reference SELECT s.referencedComponentId, @RefType, linkedComponentID 
 FROM rf2_cRefSet s 
 WHERE s.RefSetId = @Refset
@@ -340,6 +349,13 @@ FROM rf2_cRefSet s
 WHERE s.RefSetId = @Refset
 AND s.active = 1;
 
+-- Now we may have picked up some historical associations (which become is-a in RF1) for concepts that we don't use in RF1
+-- so filter those back out again
+DELETE from rf21_rel
+WHERE conceptid1 IN (
+	SELECT r.conceptid1 FROM rf21_rel r LEFT JOIN rf21_concept c
+	ON r.conceptid1 = c.conceptid
+	WHERE c.conceptid is null );
 
 SET @InactiveParent = '363661006'; /* Reason not stated */
 INSERT INTO rf21_rel SELECT  null, c.CONCEPTID, '116680003', @InactiveParent, 0,0,0,c.SOURCE FROM rf21_concept c WHERE c.CONCEPTSTATUS = 1;
@@ -362,10 +378,16 @@ INSERT INTO rf21_rel SELECT  null, c.CONCEPTID, '116680003', @InactiveParent, 0,
 SET @InactiveParent = '370126003'; /* Moved elsewhere */
 INSERT INTO rf21_rel SELECT  null, c.CONCEPTID, '116680003', @InactiveParent, 0,0,0,c.SOURCE FROM rf21_concept c WHERE c.CONCEPTSTATUS = 10;
 
+
+
 SELECT count(*) FROM rf2_crefset s 
 	INNER JOIN rf2_subset2refset m 
-		ON s.refsetId = m.refsetId;
-
+		ON s.refsetId = m.refsetId
+	INNER JOIN rf21_rel r 
+		ON s.refsetId = r.CONCEPTID1 
+		AND r.RELATIONSHIPTYPE = '116680003' 
+		AND r.CONCEPTID2 = '900000000000507009'; 
+		
 INSERT INTO rf21_subsetlist SELECT DISTINCT 
 	@RDATE || CASE WHEN m.refsetId = 900000000000508004 THEN '2' ELSE '1' END AS SubsetID, 
 	m.OriginalSubsetID AS OriginalSubsetID, 
@@ -373,17 +395,12 @@ INSERT INTO rf21_subsetlist SELECT DISTINCT
 	m.SubsetName AS SUBSETNAME, 
 	CASE WHEN LEFT(RIGHT(s.refsetId,3),1) = 1 THEN 3 ELSE 1 END AS SUBSETTYPE, 
 	CASE WHEN m.refsetId = 900000000000508004 THEN 'en-GB' ELSE 'en-US' END AS LANGUAGECODE, 
-	'0' AS SubsetRealmID, 
+	'0' AS RealmId, 
 	0 AS CONTEXTID
 FROM rf2_crefset s 
 	INNER JOIN rf2_subset2refset m 
 		ON s.refsetId = m.refsetId
-	INNER JOIN rf21_rel r 
-		ON s.refsetId = r.CONCEPTID1 
-		AND r.RELATIONSHIPTYPE = '116680003' 
-		-- English [International Organization for Standardization 639-1 code en] language reference set  
-		-- This matches both types of English Lang refset ie US and GB
-		AND r.CONCEPTID2 = '900000000000507009'; 
+WHERE s.refsetid in (@USRefSet, @GBRefSet);
 
 SELECT * from rf21_subsetlist;
 
@@ -394,7 +411,8 @@ INSERT INTO rf21_subsets
 	FROM rf2_crefset s 
 	INNER JOIN rf2_subset2refset m 
 		ON s.refsetId = m.refsetId
-	INNER JOIN rf21_rel r 
-		ON s.refsetId = r.CONCEPTID1 
-		AND r.RELATIONSHIPTYPE = '116680003' 
-		AND r.CONCEPTID2 = '900000000000507009'; -- English [International Organization for Standardization 639-1 code en] language reference set  
+	WHERE s.refsetid in (@USRefSet, @GBRefSet);
+	
+SELECT s.subsetid, count(*)
+from rf21_subsets s
+group by s.subsetid;
