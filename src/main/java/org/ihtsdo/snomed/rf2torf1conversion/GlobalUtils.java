@@ -19,7 +19,7 @@ public class GlobalUtils {
 
 	public static boolean verbose;
 
-	private static double maxOperations = 356;
+	private static double maxOperations = 379;
 	private static double queriesRun = 0;
 
 	public static void print(String msg) {
@@ -97,7 +97,7 @@ public class GlobalUtils {
 
 	synchronized public static void updateProgress() {
 		queriesRun++;
-		if (!verbose) {
+		if (!verbose && queriesRun <= maxOperations) {
 			double percentageComplete = (queriesRun / maxOperations) * 100d;
 			printn("\r" + String.format("%.2f", percentageComplete) + "% complete.");
 		}

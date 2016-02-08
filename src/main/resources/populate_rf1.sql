@@ -40,8 +40,9 @@ SELECT
   t.conceptId AS CONCEPTID,
   term AS TERM,
   capitalStatusFor(caseSignificanceId) AS INITIALCAPITALSTATUS,
-  descTypeFor(typeID) AS US_DESC_TYPE, -- assigns all FSNs (3) but labels all other terms as 'synonyms'
-  descTypeFor(typeID) AS GB_DESC_TYPE, -- assigns all FSNs (3) but labels all other terms as 'synonyms'
+  descTypeFor(typeId) AS US_DESC_TYPE, -- assigns all FSNs (3) but labels all other terms as 'synonyms'
+  descTypeFor(typeId) AS GB_DESC_TYPE, -- assigns all FSNs (3) but labels all other terms as 'synonyms'
+  descTypeFor(typeId) AS DESC_TYPE,
   t.languageCode AS LANGUAGECODE,
   t.moduleSourceFor(moduleId) AS SOURCE
 FROM rf2_term t, rf21_concept c
@@ -168,6 +169,7 @@ SET t.DESCRIPTIONSTATUS = COALESCE (
 	AND s.active = 1),t.descriptionstatus);
 -- PARALLEL_END;
 -- PARALLEL_START;	
+
 -- Where the concept has limited status (6), the description should too
 UPDATE rf21_term t
 SET t.DESCRIPTIONSTATUS = 6
@@ -234,10 +236,9 @@ WHERE EXISTS (
 AND NOT t.GB_DESC_TYPE = 3;
 
 -- Where the description is acceptable or preferred in both dialects, set the 
--- description type to 0 - unspecified
+-- common description type to 0 - unspecified
 UPDATE rf21_term t
-SET t.US_DESC_TYPE = 0,
-t.GB_DESC_TYPE = 0
+SET t.DESC_TYPE = 0
 WHERE EXISTS (
 	select 1 from rf2_crefset gb, rf2_crefset us
 	where gb.refsetID = @GBRefSet
@@ -405,13 +406,18 @@ WHERE s.refsetid in (@USRefSet, @GBRefSet);
 SELECT * from rf21_subsetlist;
 
 INSERT INTO rf21_subsets 
-	SELECT m.OriginalSubsetId AS SubsetId, referencedComponentId AS MemberID, 
-	CASE WHEN linkedComponentId = '900000000000549004' THEN 2 ELSE 1 END AS MemberStatus, 
-	null AS LinkedID 
-	FROM rf2_crefset s 
+	SELECT m.refsetId AS SubsetId, 
+	referencedComponentId AS MemberID, 
+	CASE WHEN s.refsetid =  @USRefSet THEN t.US_DESC_TYPE ELSE t.GB_DESC_TYPE END AS MemberStatus, 
+	null AS LinkedID ,
+	m.OriginalSubsetId AS SubsetOriginalId
+	FROM rf21_term t, rf2_crefset s  
 	INNER JOIN rf2_subset2refset m 
 		ON s.refsetId = m.refsetId
-	WHERE s.refsetid in (@USRefSet, @GBRefSet);
+	WHERE s.refsetid in (@USRefSet, @GBRefSet)
+	AND s.referencedComponentId = t.descriptionid
+	and t.descriptionstatus = 0
+	AND s.active = 1;
 	
 SELECT s.subsetid, count(*)
 from rf21_subsets s

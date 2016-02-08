@@ -3,7 +3,6 @@ package org.ihtsdo.snomed.rf2torf1conversion;
 import static org.ihtsdo.snomed.rf2torf1conversion.GlobalUtils.*;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -52,9 +51,11 @@ public class ConversionManager {
 						"select RELATIONSHIPID,CONCEPTID1,RELATIONSHIPTYPE,CONCEPTID2,CHARACTERISTICTYPE,REFINABILITY,RELATIONSHIPGROUP from rf21_rel");
 		exportMap
 				.put("SnomedCT_RF1Release_INT_DATE/Terminology/Content/sct1_Descriptions_en_INT_DATE.txt",
-						"select DESCRIPTIONID, DESCRIPTIONSTATUS, CONCEPTID, TERM, INITIALCAPITALSTATUS, US_DESC_TYPE as DESCRIPTIONTYPE, LANGUAGECODE from rf21_term where languageCode in (''en'',''en-US'')"
+						"select DESCRIPTIONID, DESCRIPTIONSTATUS, CONCEPTID, TERM, INITIALCAPITALSTATUS, US_DESC_TYPE as DESCRIPTIONTYPE, LANGUAGECODE from rf21_term where languageCode in (''en-US'')"
 								+ " UNION "
-								+ "select DESCRIPTIONID, DESCRIPTIONSTATUS, CONCEPTID, TERM, INITIALCAPITALSTATUS, GB_DESC_TYPE as DESCRIPTIONTYPE, LANGUAGECODE from rf21_term where languageCode =''en-GB''");
+								+ "select DESCRIPTIONID, DESCRIPTIONSTATUS, CONCEPTID, TERM, INITIALCAPITALSTATUS, GB_DESC_TYPE as DESCRIPTIONTYPE, LANGUAGECODE from rf21_term where languageCode =''en-GB''"
+								+ " UNION "
+								+ "select DESCRIPTIONID, DESCRIPTIONSTATUS, CONCEPTID, TERM, INITIALCAPITALSTATUS, DESC_TYPE as DESCRIPTIONTYPE, LANGUAGECODE from rf21_term where languageCode =''en''");
 		exportMap.put("SnomedCT_RF1Release_INT_DATE/Resources/TextDefinitions/sct1_TextDefinitions_en-US_INT_DATE.txt",
 				"select * from rf21_DEF");
 		exportMap.put("SnomedCT_RF1Release_INT_DATE/Terminology/History/sct1_ComponentHistory_Core_INT_DATE.txt",
@@ -63,12 +64,12 @@ public class ConversionManager {
 				"select COMPONENTID, REFERENCETYPE, REFERENCEDID from rf21_REFERENCE");
 		exportMap
 				.put("SnomedCT_RF1Release_INT_DATE/Subsets/Language-en-GB/der1_SubsetMembers_en-GB_INT_DATE.txt",
-						"select s.* from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.subsetid = sl.subsetOriginalId AND sl.languageCode in (''en'',''en-GB'')");
+						"select s.SubsetId, s.MemberID, s.MemberStatus, s.LinkedID from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.SubsetOriginalId = sl.subsetOriginalId AND sl.languageCode in (''en'',''en-GB'')");
 		exportMap.put("SnomedCT_RF1Release_INT_DATE/Subsets/Language-en-GB/der1_Subsets_en-GB_INT_DATE.txt",
 				"select sl.* from rf21_SUBSETLIST sl where languagecode like ''%GB%''");
 		exportMap
 				.put("SnomedCT_RF1Release_INT_DATE/Subsets/Language-en-US/der1_SubsetMembers_en-US_INT_DATE.txt",
-						"select s.* from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.subsetid = sl.subsetOriginalId AND sl.languageCode in (''en'',''en-US'')");
+						"select s.SubsetId, s.MemberID, s.MemberStatus, s.LinkedID from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.SubsetOriginalId = sl.subsetOriginalId AND sl.languageCode in (''en'',''en-US'')");
 		exportMap.put("SnomedCT_RF1Release_INT_DATE/Subsets/Language-en-US/der1_Subsets_en-US_INT_DATE.txt",
 				"select sl.* from rf21_SUBSETLIST sl where languagecode like ''%US%''");
 		// exportMap.put("rf21_XMAPLIST");
