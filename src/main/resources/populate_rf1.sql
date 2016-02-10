@@ -26,6 +26,7 @@ SET @USRefSet = '900000000000509007'; /* United States of America English langua
 SET @GBRefSet = '900000000000508004'; /* Great Britain English language reference set (foundation metadata concept) */
 SET @Acceptable = '900000000000549004';
 SET @Preferred = '900000000000548007';
+SET @ISA = '116680003';
 
 -- PARALLEL_START;
 
@@ -75,6 +76,21 @@ WHERE characteristicTypeId <> @Stated /* Ignore stated relationships */
 AND r.sourceId = c1.conceptid
 AND r.destinationId = c2.conceptid;
 
+INSERT INTO rf21_stated_rel
+SELECT
+  null AS RELATIONSHIPID,
+  r.sourceId AS CONCEPTID1,
+  r.typeId AS RELATIONSHIPTYPE,
+  r.destinationId AS CONCEPTD2,
+  0 AS CHARACTERISTICTYPE,  --All stated relationships are defining
+  0 AS REFINABILITY,
+  r.relationshipGroup AS RELATIONSHIPGROUP,
+  r.moduleSourceFor(moduleId) AS SOURCE
+FROM rf2_rel r, rf21_concept c1, rf21_concept c2  /*Only relationships for concepts that exist in RF1*/
+WHERE characteristicTypeId = @Stated /* Only stated relationships */
+AND r.sourceId = c1.conceptid
+AND r.destinationId = c2.conceptid;
+
 SELECT * from rf21_rel
 WHERE conceptid1 = 425630003
 AND relationshipgroup = 0;
@@ -89,11 +105,12 @@ SET @SCT_ROOT  = '138875005';
 SET @SCT_SPECIAL = '370115009';
 SET @SCT_LINKAGE = '106237007';
 SET @SCT_NAMESPACE = '370136006';
-SET @SCT_IS_A = '116680003';
+SET @SCT_IS_A = @ISA;
 
 DELETE from rf21_concept where conceptid = @SCT_MODEL;
 DELETE from rf21_term where conceptid = @SCT_MODEL;
 DELETE from rf21_rel where conceptid1 = @SCT_MODEL;
+DELETE from rf21_stated_rel where conceptid1 = @SCT_MODEL;
 
 UPDATE rf21_rel SET conceptid2 = @SCT_ROOT
 WHERE conceptid1 =  @SCT_LINKAGE
@@ -103,11 +120,22 @@ UPDATE rf21_rel SET conceptid2 = @SCT_SPECIAL
 WHERE conceptid1 =  @SCT_NAMESPACE
 AND relationshiptype = @SCT_IS_A;
 
+UPDATE rf21_stated_rel SET conceptid2 = @SCT_ROOT
+WHERE conceptid1 =  @SCT_LINKAGE
+AND relationshiptype = @SCT_IS_A;
+
+UPDATE rf21_stated_rel SET conceptid2 = @SCT_SPECIAL
+WHERE conceptid1 =  @SCT_NAMESPACE
+AND relationshiptype = @SCT_IS_A;
+
 CREATE INDEX TERM_CUI_X ON rf21_term(CONCEPTID);
 CREATE UNIQUE INDEX TERM_TUI_X ON rf21_term(DESCRIPTIONID);
 CREATE INDEX IDX_REL_CUI1_X ON rf21_rel(CONCEPTID1);
 CREATE INDEX IDX_REL_RELATION_X ON rf21_rel(RELATIONSHIPTYPE);
 CREATE INDEX IDX_REL_CUI2_X ON rf21_rel(CONCEPTID2);
+CREATE INDEX IDX_SREL_CUI1_X ON rf21_stated_rel(CONCEPTID1);
+CREATE INDEX IDX_SREL_RELATION_X ON rf21_stated_rel(RELATIONSHIPTYPE);
+CREATE INDEX IDX_SREL_CUI2_X ON rf21_stated_rel(CONCEPTID2);
 
 -- Currently missing legacy values for GMDN Reference Set Concept.  Merge in if required.
 MERGE INTO rf2_srefset (id, effectiveTime, active, moduleId, refSetId, referencedComponentId, linkedString)
@@ -262,6 +290,7 @@ d.SNOMEDID = (
 	
 UPDATE rf21_rel r
 SET r.REFINABILITY = refinabilityFor(r.characteristicType);
+
 -- PARALLEL_END;
 
 SET @HistoricalAttribute = '10363501000001105'; /* HAD AMP */
@@ -271,6 +300,9 @@ INSERT INTO rf21_rel SELECT  null, s.referencedComponentId, @HistoricalAttribute
 SET @HistoricalAttribute = '10363401000001106'; /* HAD VMP */
 SET @Refset = '999001321000000101';	/* Had virtual medicinal product association reference set (foundation metadata concept) */
 INSERT INTO rf21_rel SELECT  null, s.referencedComponentId, @HistoricalAttribute, linkedComponentID, 2,0,0,'RF2' FROM rf2_cRefSet s WHERE s.RefSetId = @Refset;
+
+-- sct1_References appears to only be populated with types 1,4 & 7
+-- Replaced By, Alternative, Refers To
 
 SET @HistoricalAttribute = '384598002'; /* MOVED FROM */
 SET @Refset = '900000000000525002';	/* MOVED FROM association reference set (foundation metadata concept) */
@@ -287,32 +319,22 @@ AND s.active = 1;
 
 SET @HistoricalAttribute = '370125004';    /* MOVED TO */
 SET @Refset = '900000000000524003';	/* MOVED TO association reference set (foundation metadata concept) */
-SET @RefType = 5;
+-- SET @RefType = 5; 
 INSERT INTO rf21_rel SELECT null, s.referencedComponentId, @HistoricalAttribute, linkedComponentID, 2,0,0,'RF2' 
 FROM rf2_cRefSet s 
 WHERE s.RefSetId = @Refset
 and s.active = 1;
 
-INSERT INTO rf21_reference SELECT s.referencedComponentId, @RefType, linkedComponentID 
-FROM rf2_cRefSet s 
-WHERE s.RefSetId = @Refset
-AND s.active = 1;
-
 SET @HistoricalAttribute = '149016008'; /*  MAY BE A */
 SET @Refset = '900000000000523009';	/* POSSIBLY EQUIVALENT TO association reference set (foundation metadata concept) */
-SET @RefType = 3;  /*Similar to ?*/
 INSERT INTO rf21_rel SELECT null, s.referencedComponentId, @HistoricalAttribute, linkedComponentID, 2,0,0,'RF2' 
 FROM rf2_cRefSet s 
 WHERE s.RefSetId = @Refset
 AND s.active = 1;
 
-INSERT INTO rf21_reference SELECT s.referencedComponentId, @RefType, linkedComponentID 
-FROM rf2_cRefSet s 
-WHERE s.RefSetId = @Refset
-AND s.active = 1;
 
 SET @HistoricalAttribute = '370124000'; /* REPLACED_BY */
-SET @Refset = '900000000000526001';	/* 'REPLACED BY association reference set (foundation metadata concept)' */
+SET @Refset = '900000000000526001'; /* 'REPLACED BY association reference set (foundation metadata concept)' */
 SET @RefType = 1; 
 -- But not when a "MOVED TO" row also exists for this component (null on the left join)
 INSERT INTO rf21_rel SELECT null, rep.referencedComponentId, @HistoricalAttribute, rep.linkedComponentID, 2,0,0,'RF2' 
@@ -324,28 +346,44 @@ WHERE rep.RefSetId = @Refset
 AND rep.active = 1
 AND mvd.linkedComponentID is null;
 
-
-INSERT INTO rf21_reference SELECT s.referencedComponentId, @RefType, linkedComponentID 
-FROM rf2_cRefSet s 
+-- Apparently we only have references for "Replaced By" when the 'slot' in the IS A hierarchy
+-- has been taken by a 'MOVED TO' relationship, so basicaly the complement of the previous 
+-- statement
+INSERT INTO rf21_reference SELECT s.referencedComponentId, @RefType, s.linkedComponentID 
+FROM rf2_cRefSet s, rf2_cRefSet mvd 
 WHERE s.RefSetId = @Refset
+AND s.referencedComponentId = mvd.referencedComponentId 
+AND mvd.RefsetId =  '900000000000524003' -- MOVED TO
+AND mvd.active = 1
 AND s.active = 1;
 
 SET @HistoricalAttribute = '168666000'; /* SAME_AS */
-SET @Refset = '900000000000527005';	/* 'SAME AS association reference set (foundation metadata concept)' */
-SET @RefType = 2; /*Duplicated By*/
+SET @Refset = '900000000000527005'; /* 'SAME AS association reference set (foundation metadata concept)' */
 INSERT INTO rf21_rel SELECT null, s.referencedComponentId, @HistoricalAttribute, linkedComponentID, 2,0,0,'RF2' 
 FROM rf2_cRefSet s 
 WHERE s.RefSetId = @Refset
 AND s.active = 1;
 
-INSERT INTO rf21_reference SELECT s.referencedComponentId, @RefType, linkedComponentID 
-FROM rf2_cRefSet s 
-WHERE s.RefSetId = @Refset
-AND s.active = 1;
 
 SET @HistoricalAttribute = '159083000'; /* WAS A */
-SET @Refset = '900000000000528000';	/* WAS A association reference set (foundation metadata concept) */
+SET @Refset = '900000000000528000'; /* WAS A association reference set (foundation metadata concept) */
 INSERT INTO rf21_rel SELECT null, s.referencedComponentId, @HistoricalAttribute, linkedComponentID, 2,0,0,'RF2' 
+FROM rf2_cRefSet s 
+WHERE s.RefSetId = @Refset
+AND s.active = 1;
+
+SET @Refset = '900000000000531004'; /* REFERS TO CONCEPT association reference set (foundation metadata concept) */
+SET @RefType = 7; /*Refers To*/
+INSERT INTO rf21_reference 
+SELECT s.referencedComponentId, @RefType, linkedComponentID 
+FROM rf2_cRefSet s 
+WHERE s.RefSetId = @Refset
+AND s.active = 1;
+
+SET @Refset = '900000000000530003'; /* | ALTERNATIVE association reference set (foundation metadata concept) */
+SET @RefType = 4; /*Alternative*/
+INSERT INTO rf21_reference 
+SELECT s.referencedComponentId, @RefType, linkedComponentID 
 FROM rf2_cRefSet s 
 WHERE s.RefSetId = @Refset
 AND s.active = 1;
@@ -359,26 +397,34 @@ WHERE conceptid1 IN (
 	WHERE c.conceptid is null );
 
 SET @InactiveParent = '363661006'; /* Reason not stated */
-INSERT INTO rf21_rel SELECT  null, c.CONCEPTID, '116680003', @InactiveParent, 0,0,0,c.SOURCE FROM rf21_concept c WHERE c.CONCEPTSTATUS = 1;
+INSERT INTO rf21_rel SELECT  null, c.CONCEPTID, @ISA, @InactiveParent, 0,0,0,c.SOURCE FROM rf21_concept c WHERE c.CONCEPTSTATUS = 1;
 
 SET @InactiveParent = '363662004'; /* Duplicate */
-INSERT INTO rf21_rel SELECT  null, c.CONCEPTID, '116680003', @InactiveParent, 0,0,0,c.SOURCE FROM rf21_concept c WHERE c.CONCEPTSTATUS = 2;
+INSERT INTO rf21_rel SELECT  null, c.CONCEPTID, @ISA, @InactiveParent, 0,0,0,c.SOURCE FROM rf21_concept c WHERE c.CONCEPTSTATUS = 2;
 
 SET @InactiveParent = '363663009'; /* Outdated */
-INSERT INTO rf21_rel SELECT  null, c.CONCEPTID, '116680003', @InactiveParent, 0,0,0,c.SOURCE FROM rf21_concept c WHERE c.CONCEPTSTATUS = 3;
+INSERT INTO rf21_rel SELECT  null, c.CONCEPTID, @ISA, @InactiveParent, 0,0,0,c.SOURCE FROM rf21_concept c WHERE c.CONCEPTSTATUS = 3;
 
 SET @InactiveParent = '363660007'; /*Ambiguous concept */
-INSERT INTO rf21_rel SELECT  null, c.CONCEPTID, '116680003', @InactiveParent, 0,0,0,c.SOURCE FROM rf21_concept c WHERE c.CONCEPTSTATUS = 4;
+INSERT INTO rf21_rel SELECT  null, c.CONCEPTID, @ISA, @InactiveParent, 0,0,0,c.SOURCE FROM rf21_concept c WHERE c.CONCEPTSTATUS = 4;
 
 SET @InactiveParent = '443559000'; /* Limited */
-INSERT INTO rf21_rel SELECT  null, c.CONCEPTID, '116680003', @InactiveParent, 0,0,0,c.SOURCE FROM rf21_concept c WHERE c.CONCEPTSTATUS = 6;
+INSERT INTO rf21_rel SELECT  null, c.CONCEPTID, @ISA, @InactiveParent, 0,0,0,c.SOURCE FROM rf21_concept c WHERE c.CONCEPTSTATUS = 6;
 
 SET @InactiveParent = '363664003'; /* Erroneous */
-INSERT INTO rf21_rel SELECT  null, c.CONCEPTID, '116680003', @InactiveParent, 0,0,0,c.SOURCE FROM rf21_concept c WHERE c.CONCEPTSTATUS = 5;
+INSERT INTO rf21_rel SELECT  null, c.CONCEPTID, @ISA, @InactiveParent, 0,0,0,c.SOURCE FROM rf21_concept c WHERE c.CONCEPTSTATUS = 5;
 
 SET @InactiveParent = '370126003'; /* Moved elsewhere */
-INSERT INTO rf21_rel SELECT  null, c.CONCEPTID, '116680003', @InactiveParent, 0,0,0,c.SOURCE FROM rf21_concept c WHERE c.CONCEPTSTATUS = 10;
+INSERT INTO rf21_rel SELECT  null, c.CONCEPTID, @ISA, @InactiveParent, 0,0,0,c.SOURCE FROM rf21_concept c WHERE c.CONCEPTSTATUS = 10;
 
+-- Copy all these Inactive Parents into the Stated Relationship table
+-- Except that the existing conversion processes sees these as 'defining', so set
+-- characteristic type to 0
+INSERT INTO rf21_stated_rel
+SELECT RELATIONSHIPID, CONCEPTID1, RELATIONSHIPTYPE, CONCEPTID2, 0/*CHARACTERISTICTYPE*/, 0 /*REFINABILITY*/, RELATIONSHIPGROUP, SOURCE 
+FROM rf21_rel
+WHERE relationshiptype = @ISA
+AND conceptid2 in (363661006/* Reason not stated */, 363662004/* Duplicate */, 363663009/* Outdated */, 363660007/*Ambiguous concept */, 443559000/* Limited */, 363664003/* Erroneous */, 370126003/* Moved elsewhere */);
 
 
 SELECT count(*) FROM rf2_crefset s 
@@ -386,7 +432,7 @@ SELECT count(*) FROM rf2_crefset s
 		ON s.refsetId = m.refsetId
 	INNER JOIN rf21_rel r 
 		ON s.refsetId = r.CONCEPTID1 
-		AND r.RELATIONSHIPTYPE = '116680003' 
+		AND r.RELATIONSHIPTYPE = @ISA 
 		AND r.CONCEPTID2 = '900000000000507009'; 
 		
 INSERT INTO rf21_subsetlist SELECT DISTINCT 

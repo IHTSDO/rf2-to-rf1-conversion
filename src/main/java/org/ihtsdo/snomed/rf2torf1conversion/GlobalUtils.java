@@ -19,7 +19,7 @@ public class GlobalUtils {
 
 	public static boolean verbose;
 
-	private static double maxOperations = 379;
+	private static double maxOperations = 395;
 	private static double queriesRun = 0;
 
 	public static void print(String msg) {
