@@ -53,7 +53,6 @@ WHERE EXISTS (
 AND ch.isConcept = TRUE;
 
 -- Update descriptions where the active status has changed
-
 UPDATE rf21_COMPONENTHISTORY ch
 SET CHANGETYPE=1,
 STATUS = statusFor ( select active from rf2_term_sv t
@@ -91,11 +90,14 @@ WHERE CHANGETYPE='1';
 -- The status code in this case relates to the inactivation reason for the previous description
 INSERT INTO rf21_COMPONENTHISTORY
 SELECT t.conceptid, t.effectiveTime, '2', 
+-- Find the inactivation reason for the OTHER term which was inactivated
 COALESCE ( SELECT magicNumberFor(s.linkedComponentId)
-	from rf2_crefset_sv s
-	where s.referencedComponentId = t.id
+	from rf2_crefset_sv s, rf2_term_sv t2
+	where t2.conceptId = t.conceptId
+	AND s.referencedComponentId = t2.id
 	and s.refSetId ='900000000000490003' -- Description Inactivation Indicator
-	AND s.effectiveTime = t.effectiveTime
+	AND s.effectiveTime = t2.effectiveTime
+	AND t2.effectiveTime = t.effectiveTime
 	AND s.active = 1,
 	1),
 'FULLYSPECIFIEDNAME CHANGE', TRUE, null 
