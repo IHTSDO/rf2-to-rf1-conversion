@@ -30,10 +30,6 @@ SET @ISA = '116680003';
 
 -- PARALLEL_START;
 
-SELECT typeid, count(*)
-from rf2_term
-group by typeid; 
-
 INSERT INTO rf21_term
 SELECT
   id AS DESCRIPTIONID,
@@ -56,10 +52,6 @@ SELECT
   '' AS FULLYSPECIFIEDNAME,
   term AS TERM
 FROM rf2_def WHERE active = 1;
-
-SELECT * from rf2_rel
-WHERE sourceid = 425630003
-AND relationshipgroup = 0;
 
 INSERT INTO rf21_rel
 SELECT
@@ -90,10 +82,6 @@ FROM rf2_rel r, rf21_concept c1, rf21_concept c2  /*Only relationships for conce
 WHERE characteristicTypeId = @Stated /* Only stated relationships */
 AND r.sourceId = c1.conceptid
 AND r.destinationId = c2.conceptid;
-
-SELECT * from rf21_rel
-WHERE conceptid1 = 425630003
-AND relationshipgroup = 0;
 
 -- PARALLEL_END;
 -- PARALLEL_START;
@@ -263,7 +251,7 @@ WHERE EXISTS (
 	and gb.linkedComponentId = @Preferred )
 AND NOT t.GB_DESC_TYPE = 3;
 
--- Where the description is acceptable or preferred in both dialects, set the 
+-- Where the description is acceptable in one dialect and preferred in the other, set the 
 -- common description type to 0 - unspecified
 UPDATE rf21_term t
 SET t.DESC_TYPE = 0
@@ -275,6 +263,12 @@ WHERE EXISTS (
 	and t.DESCRIPTIONID = us.referencedComponentId
 	and gb.linkedComponentId != us.linkedComponentId )
 AND NOT t.US_DESC_TYPE = 3;
+
+-- Set the common type to 1 (Preferred) when it is preferred in both dialects
+UPDATE rf21_term t
+SET t.DESC_TYPE = 1
+WHERE t.US_DESC_TYPE = 1
+AND t.GB_DESC_TYPE = 1;
 
 UPDATE rf21_def d
 SET d.FULLYSPECIFIEDNAME = (
@@ -426,14 +420,6 @@ FROM rf21_rel
 WHERE relationshiptype = @ISA
 AND conceptid2 in (363661006/* Reason not stated */, 363662004/* Duplicate */, 363663009/* Outdated */, 363660007/*Ambiguous concept */, 443559000/* Limited */, 363664003/* Erroneous */, 370126003/* Moved elsewhere */);
 
-
-SELECT count(*) FROM rf2_crefset s 
-	INNER JOIN rf2_subset2refset m 
-		ON s.refsetId = m.refsetId
-	INNER JOIN rf21_rel r 
-		ON s.refsetId = r.CONCEPTID1 
-		AND r.RELATIONSHIPTYPE = @ISA 
-		AND r.CONCEPTID2 = '900000000000507009'; 
 		
 INSERT INTO rf21_subsetlist SELECT DISTINCT 
 	@RDATE || CASE WHEN m.refsetId = 900000000000508004 THEN '2' ELSE '1' END AS SubsetID, 
@@ -449,8 +435,6 @@ FROM rf2_crefset s
 		ON s.refsetId = m.refsetId
 WHERE s.refsetid in (@USRefSet, @GBRefSet);
 
-SELECT * from rf21_subsetlist;
-
 INSERT INTO rf21_subsets 
 	SELECT m.refsetId AS SubsetId, 
 	referencedComponentId AS MemberID, 
@@ -465,6 +449,3 @@ INSERT INTO rf21_subsets
 	and t.descriptionstatus = 0
 	AND s.active = 1;
 	
-SELECT s.subsetid, count(*)
-from rf21_subsets s
-group by s.subsetid;

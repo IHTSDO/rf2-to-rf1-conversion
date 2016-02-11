@@ -24,7 +24,7 @@ CREATE INDEX idx_comphist_id ON rf21_COMPONENTHISTORY(COMPONENTID);
 CREATE INDEX idx_comphist_et ON rf21_COMPONENTHISTORY(releaseVersion);
 CREATE INDEX idx_comphist_status ON rf21_COMPONENTHISTORY(status);
 CREATE INDEX idx_comphist_prev ON rf21_COMPONENTHISTORY(previousVersion);
-CREATE INDEX idx_comphist_c ON rf21_COMPONENTHISTORY(is_concept);
+CREATE INDEX idx_comphist_c ON rf21_COMPONENTHISTORY(isConcept);
 
 -- PARALLEL_START;
 -- Update the first entry for a component to be the "Added" row
@@ -41,7 +41,7 @@ SET CHANGETYPE=1,
 STATUS = statusFor ( select active from rf2_concept_sv c
 						where ch.componentid = c.id
 						and ch.releaseversion = c.effectiveTime ),
-Reason = 'Status change'
+Reason = 'STATUS CHANGE'
 WHERE EXISTS (
 	SELECT 1 FROM rf2_concept_sv c2, rf2_concept_sv c3
 	WHERE ch.componentid = c2.id
@@ -50,7 +50,7 @@ WHERE EXISTS (
 	AND c3.effectiveTime = ch.previousVersion
 	AND c2.active != c3.active
 )
-AND ch.IS_CONCEPT = TRUE;
+AND ch.isConcept = TRUE;
 
 -- Update descriptions where the active status has changed
 
@@ -68,7 +68,7 @@ WHERE EXISTS (
 	AND t3.effectiveTime = ch.previousVersion
 	AND t2.active != t3.active
 ) -- Where an FSN has been made inactive, add that as a change to the concept
-AND ch.IS_CONCEPT = FALSE;
+AND ch.isConcept = FALSE;
 
 SET @CONCEPT_INACT_RS = 900000000000489007;
 SET @DESC_INACT_RS = 900000000000490003;
@@ -88,8 +88,17 @@ WHERE CHANGETYPE='1';
 -- then add a row to indicate an FSN change for the concept
 -- Watch our for changes to case sensitivity.  Filter out cases where earlier active row 
 -- with different case sensitivity exists.
+-- The status code in this case relates to the inactivation reason for the previous description
 INSERT INTO rf21_COMPONENTHISTORY
-SELECT t.conceptid, t.effectiveTime, '2', '0', 'FULLYSPECIFIEDNAME CHANGE', TRUE, null 
+SELECT t.conceptid, t.effectiveTime, '2', 
+COALESCE ( SELECT magicNumberFor(s.linkedComponentId)
+	from rf2_crefset_sv s
+	where s.referencedComponentId = t.id
+	and s.refSetId ='900000000000490003' -- Description Inactivation Indicator
+	AND s.effectiveTime = t.effectiveTime
+	AND s.active = 1,
+	1),
+'FULLYSPECIFIEDNAME CHANGE', TRUE, null 
 FROM rf2_term_sv t
 WHERE t.typeid = @FSN
 AND t.active = 1
@@ -102,25 +111,57 @@ AND NOT EXISTS (
 AND NOT EXISTS (
 	SELECT 1 FROM rf2_term_sv t2
 	where t.id = t2.id
-	and t2.effectiveTime < t.id
+	and t2.effectiveTime < t.effectiveTime
 	and t2.active = 1
 	and NOT t2.casesignificanceid = t.caseSignificanceId
 );
 
 -- Where there was a status change and the previous version had a different
--- case sensitivity, set an INITIALCAPITALSTATUS CHANGE
+-- case sensitivity, set an INITIALCAPITALSTATUS CHANGE.  For descriptions only.
 UPDATE rf21_COMPONENTHISTORY ch
 SET changeType = 2,
 status = 0,
 reason = 'INITIALCAPITALSTATUS CHANGE'
-WHERE ch.is_concept = TRUE
+WHERE ch.isConcept = FALSE
 AND EXISTS (
-	SELECT 1 FROM rf2_concept_sv c1, rf2_concept_sv c2
-	WHERE ch.componentid = c1.id
-	AND c1.id = c2.id
-	AND c1.effectiveTime = ch.releaseVersion
-	AND c2.effectiveTime = ch.previousVersion
-	AND NOT c1.casesignificanceid = c2.casesignificanceid
+	SELECT 1 FROM rf2_term_sv t1, rf2_term_sv t2
+	WHERE ch.componentid = t1.id
+	AND t1.id = t2.id
+	AND t1.effectiveTime = ch.releaseVersion
+	AND t2.effectiveTime = ch.previousVersion
+	AND NOT t1.casesignificanceid = t2.casesignificanceid
+);
+
+-- When a concept goes inactive, if there is not already a row for 
+-- the description changing state, then add one in 
+INSERT INTO rf21_COMPONENTHISTORY
+SELECT DISTINCT t.id, ch2.releaseVersion, 2, 8, 'DESCRIPTIONSTATUS CHANGE', false, null
+FROM rf21_COMPONENTHISTORY ch2, rf21_COMPONENTHISTORY ch3, rf2_term_sv t
+WHERE ch2.componentid = ch3.componentid
+AND ch2.isConcept = TRUE
+AND ch3.releaseVersion = ch2.previousVersion
+AND ch2.status > 0
+AND t.conceptid = ch2.componentid
+AND t.active = 1
+AND t.effectiveTime < ch2.releaseVersion
+AND NOT EXISTS (
+	SELECT 1 FROM rf2_term_sv t2
+	WHERE t.id = t2.id
+	AND t2.active = 0
+	AND t2.effectiveTime <= ch2.releaseVersion 
+);
+
+-- When a concept goes inactive, description statuses get set to 8 - "Remains as a valid Description of a Concept which is no longer active."
+UPDATE rf21_COMPONENTHISTORY ch
+SET status = 8
+WHERE ch.isConcept = false
+AND EXISTS (
+	SELECT 1 FROM rf21_COMPONENTHISTORY ch2, rf2_term t
+	WHERE ch.componentId = t.id
+	AND ch2.componentId = t.conceptId
+	AND ch.releaseVersion = ch2.releaseVersion
+	AND ch2.status > 0
+	AND ch.status = 0
 );
 
 -- And now for some ...hopefully temporary... tweaks because the reason given 
@@ -129,7 +170,6 @@ UPDATE rf21_COMPONENTHISTORY
 SET reason = 'CONCEPTSTATUS CHANGE'
 WHERE status = 4;
 
-UPDATE rf21_COMPONENTHISTORY
-SET reason = 'Status CHANGE'
-WHERE status = 10;
--- PARALLEL_END;
+-- Now delete anything we haven't found a reason for.  Eg changes to definitionStatusId
+DELETE from rf21_COMPONENTHISTORY
+WHERE status = -1;

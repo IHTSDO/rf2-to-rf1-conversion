@@ -31,18 +31,6 @@ WHERE s.active = 1 AND s.effectiveTime =
     AND (sv.characteristicTypeId = s.characteristicTypeId OR sv.effectiveTime <= 20050131)
    );
 
-SELECT * FROM rf2_rel_sv s
-WHERE s.active = 1 
-AND s.sourceid = 425630003
-AND relationshipgroup = 0
-AND s.effectiveTime =
-  (SELECT MAX(sv.effectiveTime) AS LatestDate FROM rf2_rel_sv AS sv
-   WHERE sv.id=s.id AND sv.effectiveTime <= 20160131);
-   
-SELECT * from rf2_rel r
-where r.sourceid = 425630003
-AND relationshipgroup = 0;
-
 INSERT INTO rf2_identifier
 SELECT * FROM rf2_identifier_sv s
 WHERE s.effectiveTime =

@@ -10,7 +10,12 @@
 	CREATE INDEX idx_relv_id ON rf2_rel_sv(ID);
 	CREATE INDEX idx_identifierv_id ON rf2_identifier_sv(referencedComponentId,identifierSchemeId);
 	CREATE INDEX idx_refsetv_id ON rf2_refset_sv(ID);
-	CREATE INDEX idx_crefsetv_id ON rf2_crefset_sv(ID);
+	
+	CREATE INDEX idx_crefsetv_id ON rf2_crefset_sv(id);
+	CREATE INDEX idx_crefsetv_rc ON rf2_crefset_sv(refsetid, referencedComponentId);
+	CREATE INDEX idx_crefsetv_et ON rf2_crefset_sv(effectiveTime);
+	CREATE INDEX idx_crefsetv_a ON rf2_crefset_sv(active);	
+	
 	CREATE INDEX idx_icrefsetv_id ON rf2_icrefset_sv(ID);
 	CREATE INDEX idx_ccirefsetv_id ON rf2_ccirefset_sv(ID);
 	CREATE INDEX idx_cirefsetv_id ON rf2_cirefset_sv(ID);
