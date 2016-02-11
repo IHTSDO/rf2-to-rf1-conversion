@@ -94,6 +94,7 @@ SELECT t.conceptid, t.effectiveTime, '2',
 COALESCE ( SELECT magicNumberFor(s.linkedComponentId)
 	from rf2_crefset_sv s, rf2_term_sv t2
 	where t2.conceptId = t.conceptId
+	AND t2.typeid = @FSN
 	AND s.referencedComponentId = t2.id
 	and s.refSetId ='900000000000490003' -- Description Inactivation Indicator
 	AND s.effectiveTime = t2.effectiveTime
