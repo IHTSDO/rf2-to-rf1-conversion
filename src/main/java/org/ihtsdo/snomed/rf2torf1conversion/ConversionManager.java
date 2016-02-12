@@ -150,7 +150,8 @@ public class ConversionManager {
 		File tempDir = null;
 		try {
 			if (unzipLocation != null) {
-				tempDir = File.createTempFile("rf2-to-rf1", null, unzipLocation);
+				tempDir = File.createTempFile("rf2-to-rf1", "", unzipLocation);
+				tempDir.mkdirs();
 			} else {
 				// Work in the traditional temp file location for the OS
 				tempDir = Files.createTempDir();
