@@ -97,18 +97,29 @@ WHERE s.effectiveTime =
 -- PARALLEL_START;
 CREATE INDEX idx_concept_id ON rf2_concept(ID);
 CREATE INDEX idx_concept_dsid ON rf2_concept(definitionStatusId);
+
+CREATE INDEX idx_term_id ON rf2_term(id);
 CREATE INDEX idx_term_cid ON rf2_term(conceptId);
 CREATE INDEX idx_term_t ON rf2_term(term);
 CREATE INDEX idx_term_tid ON rf2_term(typeid);
+CREATE INDEX idx_term_et ON rf2_term(effectiveTime);
+
 CREATE INDEX idx_rel_sid ON rf2_rel(sourceId);
 CREATE INDEX idx_rel_tid ON rf2_rel(typeId);
 CREATE INDEX idx_rel_did ON rf2_rel(destinationId);
 CREATE INDEX idx_rel_ctid ON rf2_rel(characteristicTypeId);
 CREATE INDEX idx_ref_ref ON rf2_refset(refsetId);
+
 CREATE INDEX idx_cref_ref ON rf2_crefset(refsetId);
+CREATE INDEX idx_cref_et ON rf2_crefset(effectiveTime);
+CREATE INDEX idx_cref_rci ON rf2_crefset(referencedComponentId);
+CREATE INDEX idx_sref_lci ON rf2_crefset(linkedComponentId);
+
 CREATE INDEX idx_icref_ref ON rf2_icrefset(refsetId);
+
 CREATE INDEX idx_sref_ref ON rf2_srefset(refsetId);
 CREATE INDEX idx_sref_rci ON rf2_srefset(referencedComponentId);
+
 
 CREATE INDEX idx_cciref_ref ON rf2_ccirefset(refsetId);
 CREATE INDEX idx_ciref_ref ON rf2_cirefset(refsetId);
@@ -116,7 +127,7 @@ CREATE INDEX idx_ssref_ref ON rf2_ssrefset(refsetId);
 CREATE INDEX idx_iisssref_ref ON rf2_iissscrefset(refsetId);
 CREATE INDEX idx_iisssciref_ref ON rf2_iissscirefset(refsetId);
 CREATE INDEX idx_ref_rci ON rf2_refset(referencedComponentId);
-CREATE INDEX idx_cref_rci ON rf2_crefset(referencedComponentId);
+
 CREATE INDEX idx_icref_rci ON rf2_icrefset(referencedComponentId);
 
 CREATE INDEX idx_cciref_rci ON rf2_ccirefset(referencedComponentId);
@@ -124,7 +135,7 @@ CREATE INDEX idx_ciref_rci ON rf2_cirefset(referencedComponentId);
 CREATE INDEX idx_ssref_rci ON rf2_ssrefset(referencedComponentId);
 CREATE INDEX idx_iissscref_rci ON rf2_iissscrefset(referencedComponentId);
 CREATE INDEX idx_iisssciref_rci ON rf2_iissscirefset(referencedComponentId);
-CREATE INDEX idx_cref_lci ON rf2_crefset(linkedComponentId);
+
 CREATE INDEX idx_ciref_lci ON rf2_cirefset(linkedComponentId);
 CREATE INDEX idx_cciref_lci1 ON rf2_ccirefset(linkedComponentId1);
 CREATE INDEX idx_cciref_lci2 ON rf2_ccirefset(linkedComponentId2);

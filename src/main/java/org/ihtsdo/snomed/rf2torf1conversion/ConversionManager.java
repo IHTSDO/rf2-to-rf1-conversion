@@ -16,6 +16,7 @@ public class ConversionManager {
 	File rf2Archive;
 	DBManager db;
 	String releaseDate;
+	boolean includeHistory = false;
 	
 	static Map<String, String> fileToTable = new HashMap<String, String>();
 	{
@@ -163,7 +164,11 @@ public class ConversionManager {
 
 	private void convert() throws RF1ConversionException {
 		db.executeResource("create_rf1_schema.sql");
-		db.executeResource("populate_rf1_historical.sql");
+		if (includeHistory) {
+			db.executeResource("populate_rf1_historical.sql");
+		} else {
+			print("Skipping generation of RF1 History.  Set -h parameter if this is required.");
+		}
 		db.executeResource("populate_rf1.sql");
 	}
 
@@ -176,6 +181,8 @@ public class ConversionManager {
 		for (String thisArg : args) {
 			if (thisArg.equals("-v")) {
 				GlobalUtils.verbose = true;
+			} else if (thisArg.equals("-h")) {
+				includeHistory = true;
 			} else {
 				File possibleArchive = new File(thisArg);
 				if (possibleArchive.exists() && !possibleArchive.isDirectory() && possibleArchive.canRead()) {

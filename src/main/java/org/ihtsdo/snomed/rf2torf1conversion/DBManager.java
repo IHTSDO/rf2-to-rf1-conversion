@@ -25,7 +25,7 @@ import com.google.common.io.Resources;
 public class DBManager {
 
 	private static final String DB_DRIVER = "org.h2.Driver";
-	private static final String DB_OPTIONS = "MULTI_THREADED=1;LOG=0;CACHE_SIZE=65536;LOCK_MODE=3";
+	private static final String DB_OPTIONS = "MULTI_THREADED=0;LOG=0;CACHE_SIZE=1048576;LOCK_MODE=3";
 	private static final String DEFAULT_FILE_SEPARATOR = "/";
 	private static final String SQL_DELIMITER = ";";
 

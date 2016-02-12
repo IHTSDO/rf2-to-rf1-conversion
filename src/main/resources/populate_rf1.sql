@@ -116,8 +116,10 @@ UPDATE rf21_stated_rel SET conceptid2 = @SCT_SPECIAL
 WHERE conceptid1 =  @SCT_NAMESPACE
 AND relationshiptype = @SCT_IS_A;
 
-CREATE INDEX TERM_CUI_X ON rf21_term(CONCEPTID);
-CREATE UNIQUE INDEX TERM_TUI_X ON rf21_term(DESCRIPTIONID);
+CREATE INDEX idx_21t_cid ON rf21_term(CONCEPTID);
+CREATE UNIQUE INDEX idx_21t_did ON rf21_term(descriptionId);
+CREATE INDEX idx_21t_ds ON rf21_term(descriptionStatus);
+
 CREATE INDEX IDX_REL_CUI1_X ON rf21_rel(CONCEPTID1);
 CREATE INDEX IDX_REL_RELATION_X ON rf21_rel(RELATIONSHIPTYPE);
 CREATE INDEX IDX_REL_CUI2_X ON rf21_rel(CONCEPTID2);
@@ -269,6 +271,23 @@ UPDATE rf21_term t
 SET t.DESC_TYPE = 1
 WHERE t.US_DESC_TYPE = 1
 AND t.GB_DESC_TYPE = 1;
+
+-- TODO REMOVE THIS TWEAK once TCs are happy with the basic process
+-- When a description is inactive and the langrefset line that made it preferred
+-- was inactivated at the same time, then mark it as preferred
+UPDATE rf21_term t
+SET t.DESC_TYPE = 1
+WHERE descriptionStatus <> 0
+AND EXISTS (
+	SELECT 1 from rf2_term t2, rf2_crefset l
+	WHERE t2.id = t.descriptionid
+	AND t2.active = 0
+	AND l.referencedComponentId = t2.id
+	AND t2.effectiveTime = l.effectiveTime
+	AND l.refsetid = @USRefSet
+	AND l.linkedComponentId = @Preferred
+	AND l.active = 0
+);
 
 UPDATE rf21_def d
 SET d.FULLYSPECIFIEDNAME = (
