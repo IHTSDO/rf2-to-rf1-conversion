@@ -275,7 +275,8 @@ AND t.GB_DESC_TYPE = 1;
 -- TODO REMOVE THIS TWEAK once TCs are happy with the basic process
 -- When a description is inactive and the langrefset line that made it preferred
 -- was inactivated at the same time, then mark it as preferred
-UPDATE rf21_term t
+-- TODO  This one isn't finishing
+/*UPDATE rf21_term t
 SET t.DESC_TYPE = 1
 WHERE descriptionStatus <> 0
 AND EXISTS (
@@ -287,7 +288,8 @@ AND EXISTS (
 	AND l.refsetid = @USRefSet
 	AND l.linkedComponentId = @Preferred
 	AND l.active = 0
-);
+)*/
+;
 
 UPDATE rf21_def d
 SET d.FULLYSPECIFIEDNAME = (
