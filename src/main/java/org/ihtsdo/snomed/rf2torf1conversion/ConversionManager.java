@@ -3,6 +3,7 @@ package org.ihtsdo.snomed.rf2torf1conversion;
 import static org.ihtsdo.snomed.rf2torf1conversion.GlobalUtils.*;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -14,6 +15,7 @@ import com.google.common.io.Files;
 public class ConversionManager {
 
 	File rf2Archive;
+	File unzipLocation = null;
 	DBManager db;
 	String releaseDate;
 	boolean includeHistory = false;
@@ -144,7 +146,18 @@ public class ConversionManager {
 	}
 
 	private File unzipArchive() throws RF1ConversionException {
-		File tempDir = Files.createTempDir();
+
+		File tempDir = null;
+		try {
+			if (unzipLocation != null) {
+				tempDir = File.createTempFile("rf2-to-rf1", null, unzipLocation);
+			} else {
+				// Work in the traditional temp file location for the OS
+				tempDir = Files.createTempDir();
+			}
+		} catch (IOException e) {
+			throw new RF1ConversionException("Unable to create temporary directory for archive extration");
+		}
 		// We only need to work with the full files
 		unzipFlat(rf2Archive, tempDir, "Full");
 		return tempDir;
@@ -174,15 +187,24 @@ public class ConversionManager {
 
 	private void init(String[] args, File dbLocation) throws RF1ConversionException {
 		if (args.length < 1) {
-			print("Usage: java ConversionManager [-v] <rf2 archive location>");
+			print("Usage: java ConversionManager [-v] [-u <unzip location>] <rf2 archive location>");
 			exit();
 		}
+		boolean isUnzipLocation = false;
 
 		for (String thisArg : args) {
 			if (thisArg.equals("-v")) {
 				GlobalUtils.verbose = true;
 			} else if (thisArg.equals("-h")) {
 				includeHistory = true;
+			} else if (thisArg.equals("-u")) {
+				isUnzipLocation = true;
+			} else if (isUnzipLocation) {
+				unzipLocation = new File(thisArg);
+				if (!unzipLocation.isDirectory()) {
+					throw new RF1ConversionException(thisArg + " is an invalid location to unzip archive to!");
+				}
+				isUnzipLocation = false;
 			} else {
 				File possibleArchive = new File(thisArg);
 				if (possibleArchive.exists() && !possibleArchive.isDirectory() && possibleArchive.canRead()) {
