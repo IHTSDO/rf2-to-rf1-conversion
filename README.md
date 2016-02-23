@@ -10,7 +10,7 @@ Usage:<code>java -jar [JVM Options] RF2toRF1Converter.jar [Processing Flags] <RF
 
 eg  <code>java -jar -Xmx4g RF2toRF1Converter.jar /Backup/SnomedCT_RF2Release_INT_20160131.zip</code>
 
-###Flags
+### Flags
 
 -h	Also generate the history file
 
