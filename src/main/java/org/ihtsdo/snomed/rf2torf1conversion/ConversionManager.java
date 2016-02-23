@@ -54,11 +54,8 @@ public class ConversionManager {
 						"select RELATIONSHIPID,CONCEPTID1,RELATIONSHIPTYPE,CONCEPTID2,CHARACTERISTICTYPE,REFINABILITY,RELATIONSHIPGROUP from rf21_rel");
 		exportMap
 				.put("SnomedCT_RF1Release_INT_DATE/Terminology/Content/sct1_Descriptions_en_INT_DATE.txt",
-						"select DESCRIPTIONID, DESCRIPTIONSTATUS, CONCEPTID, TERM, INITIALCAPITALSTATUS, US_DESC_TYPE as DESCRIPTIONTYPE, LANGUAGECODE from rf21_term where languageCode in (''en-US'')"
-								+ " UNION "
-								+ "select DESCRIPTIONID, DESCRIPTIONSTATUS, CONCEPTID, TERM, INITIALCAPITALSTATUS, GB_DESC_TYPE as DESCRIPTIONTYPE, LANGUAGECODE from rf21_term where languageCode =''en-GB''"
-								+ " UNION "
-								+ "select DESCRIPTIONID, DESCRIPTIONSTATUS, CONCEPTID, TERM, INITIALCAPITALSTATUS, DESC_TYPE as DESCRIPTIONTYPE, LANGUAGECODE from rf21_term where languageCode =''en''");
+						"select DESCRIPTIONID, DESCRIPTIONSTATUS, CONCEPTID, TERM, INITIALCAPITALSTATUS, DESC_TYPE as DESCRIPTIONTYPE, LANGUAGECODE from rf21_term");
+
 		exportMap.put("SnomedCT_RF1Release_INT_DATE/Resources/TextDefinitions/sct1_TextDefinitions_en-US_INT_DATE.txt",
 				"select * from rf21_DEF");
 		exportMap.put("SnomedCT_RF1Release_INT_DATE/Terminology/History/sct1_ComponentHistory_Core_INT_DATE.txt",
@@ -180,7 +177,7 @@ public class ConversionManager {
 		if (includeHistory) {
 			db.executeResource("populate_rf1_historical.sql");
 		} else {
-			print("Skipping generation of RF1 History.  Set -h parameter if this is required.");
+			print("\nSkipping generation of RF1 History.  Set -h parameter if this is required.");
 		}
 		db.executeResource("populate_rf1.sql");
 	}

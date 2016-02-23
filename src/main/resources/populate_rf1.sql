@@ -84,6 +84,18 @@ AND r.sourceId = c1.conceptid
 AND r.destinationId = c2.conceptid;
 
 -- PARALLEL_END;
+
+CREATE INDEX idx_21t_cid ON rf21_term(CONCEPTID);
+CREATE UNIQUE INDEX idx_21t_did ON rf21_term(descriptionId);
+CREATE INDEX idx_21t_ds ON rf21_term(descriptionStatus);
+
+CREATE INDEX IDX_REL_CUI1_X ON rf21_rel(CONCEPTID1);
+CREATE INDEX IDX_REL_RELATION_X ON rf21_rel(RELATIONSHIPTYPE);
+CREATE INDEX IDX_REL_CUI2_X ON rf21_rel(CONCEPTID2);
+CREATE INDEX IDX_SREL_CUI1_X ON rf21_stated_rel(CONCEPTID1);
+CREATE INDEX IDX_SREL_RELATION_X ON rf21_stated_rel(RELATIONSHIPTYPE);
+CREATE INDEX IDX_SREL_CUI2_X ON rf21_stated_rel(CONCEPTID2);
+
 -- PARALLEL_START;
 
 -- The Snomed CT Model Component 900000000000441003 doesn't exist in RF1 so we're 
@@ -115,17 +127,6 @@ AND relationshiptype = @SCT_IS_A;
 UPDATE rf21_stated_rel SET conceptid2 = @SCT_SPECIAL
 WHERE conceptid1 =  @SCT_NAMESPACE
 AND relationshiptype = @SCT_IS_A;
-
-CREATE INDEX idx_21t_cid ON rf21_term(CONCEPTID);
-CREATE UNIQUE INDEX idx_21t_did ON rf21_term(descriptionId);
-CREATE INDEX idx_21t_ds ON rf21_term(descriptionStatus);
-
-CREATE INDEX IDX_REL_CUI1_X ON rf21_rel(CONCEPTID1);
-CREATE INDEX IDX_REL_RELATION_X ON rf21_rel(RELATIONSHIPTYPE);
-CREATE INDEX IDX_REL_CUI2_X ON rf21_rel(CONCEPTID2);
-CREATE INDEX IDX_SREL_CUI1_X ON rf21_stated_rel(CONCEPTID1);
-CREATE INDEX IDX_SREL_RELATION_X ON rf21_stated_rel(RELATIONSHIPTYPE);
-CREATE INDEX IDX_SREL_CUI2_X ON rf21_stated_rel(CONCEPTID2);
 
 -- Currently missing legacy values for GMDN Reference Set Concept.  Merge in if required.
 MERGE INTO rf2_srefset (id, effectiveTime, active, moduleId, refSetId, referencedComponentId, linkedString)
@@ -253,29 +254,62 @@ WHERE EXISTS (
 	and gb.linkedComponentId = @Preferred )
 AND NOT t.GB_DESC_TYPE = 3;
 
+
+
+-- Set the common type to 1 (Preferred) when it is preferred in both dialects
+-- or when it's preferred in the dialect of its language code
+UPDATE rf21_term t
+SET t.DESC_TYPE = 1
+WHERE (t.US_DESC_TYPE = 1 AND t.GB_DESC_TYPE = 1 )
+OR (t.LANGUAGECODE = 'en-US' AND  t.US_DESC_TYPE = 1)
+OR (t.LANGUAGECODE = 'en-GB' AND  t.GB_DESC_TYPE = 1);
+
+-- TODO REMOVE THIS TWEAK once TCs are happy with the basic process
+-- When a description is inactive and the langrefset line that made it preferred
+-- was inactivated at the same time, then mark it as preferred
+-- TODO  This one isn't finishing
+create table tmp_inactive_preferred AS
+	SELECT t2.id AS descriptionId from rf2_term t2, rf2_crefset l
+	WHERE l.referencedComponentId = t2.id
+	AND t2.active = 0
+	AND t2.effectiveTime = l.effectiveTime
+	AND l.refsetid = @USRefSet
+	AND l.linkedComponentId = @Preferred
+	AND l.active = 0;
+	
+create index idx_tmp_ip_id on tmp_inactive_preferred(descriptionId);
+
+SELECT count(*) from tmp_inactive_preferred;
+
+UPDATE rf21_term t
+SET t.DESC_TYPE = 1
+WHERE descriptionStatus <> 0
+AND NOT t.DESC_TYPE = 3
+AND EXISTS (
+	SELECT 1 FROM tmp_inactive_preferred tt
+	where t.descriptionId = tt.descriptionId
+);
+
 -- Where the description is acceptable in one dialect and preferred in the other, set the 
--- common description type to 0 - unspecified
+-- common description type to 0 - unspecified;
+
+SELECT * from rf21_term where descriptionid = 2667522010;
+SELECT * from rf2_crefset where referencedComponentId = 2667522010;
+
 UPDATE rf21_term t
 SET t.DESC_TYPE = 0
 WHERE EXISTS (
 	select 1 from rf2_crefset gb, rf2_crefset us
 	where gb.refsetID = @GBRefSet
 	and us.refsetID = @USRefSet
+	-- and gb.active = us.active   TODO Add this line back in for correct results (but unlike exisiting conversion)
 	and t.DESCRIPTIONID = gb.referencedComponentId
 	and t.DESCRIPTIONID = us.referencedComponentId
 	and gb.linkedComponentId != us.linkedComponentId )
 AND NOT t.US_DESC_TYPE = 3;
 
--- Set the common type to 1 (Preferred) when it is preferred in both dialects
-UPDATE rf21_term t
-SET t.DESC_TYPE = 1
-WHERE t.US_DESC_TYPE = 1
-AND t.GB_DESC_TYPE = 1;
+SELECT * from rf21_term where descriptionid = 2667522010;
 
--- TODO REMOVE THIS TWEAK once TCs are happy with the basic process
--- When a description is inactive and the langrefset line that made it preferred
--- was inactivated at the same time, then mark it as preferred
--- TODO  This one isn't finishing
 /*UPDATE rf21_term t
 SET t.DESC_TYPE = 1
 WHERE descriptionStatus <> 0

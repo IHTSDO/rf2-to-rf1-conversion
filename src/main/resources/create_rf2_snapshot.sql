@@ -103,6 +103,7 @@ CREATE INDEX idx_term_cid ON rf2_term(conceptId);
 CREATE INDEX idx_term_t ON rf2_term(term);
 CREATE INDEX idx_term_tid ON rf2_term(typeid);
 CREATE INDEX idx_term_et ON rf2_term(effectiveTime);
+CREATE INDEX idx_term_a ON rf2_term(active);
 
 CREATE INDEX idx_rel_sid ON rf2_rel(sourceId);
 CREATE INDEX idx_rel_tid ON rf2_rel(typeId);
@@ -110,10 +111,12 @@ CREATE INDEX idx_rel_did ON rf2_rel(destinationId);
 CREATE INDEX idx_rel_ctid ON rf2_rel(characteristicTypeId);
 CREATE INDEX idx_ref_ref ON rf2_refset(refsetId);
 
+
 CREATE INDEX idx_cref_ref ON rf2_crefset(refsetId);
 CREATE INDEX idx_cref_et ON rf2_crefset(effectiveTime);
 CREATE INDEX idx_cref_rci ON rf2_crefset(referencedComponentId);
 CREATE INDEX idx_sref_lci ON rf2_crefset(linkedComponentId);
+CREATE INDEX idx_sref_a ON rf2_crefset(active);
 
 CREATE INDEX idx_icref_ref ON rf2_icrefset(refsetId);
 
