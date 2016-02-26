@@ -1,6 +1,6 @@
 # RF2 to RF1 conversion by IHTSDO
 
-Based on work by Jermey Rogers which was marked as Crown Copyright
+Based on work by Jeremy Rogers which was marked as Crown Copyright
 and covered by the Open Government License http://www.nationalarchives.gov.uk/doc/open-government-licence/
 
 This RF2 to RF1 conversion works solely from the data available in an RF2 archive.  As such, some items such as qualifier relationships are not available.
