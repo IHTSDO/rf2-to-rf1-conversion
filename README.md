@@ -18,6 +18,8 @@ eg  <code>java -jar -Xmx4g RF2toRF1Converter.jar /Backup/SnomedCT_RF2Release_INT
 
 -u	Specify location for unzip eg difference physical drive to avoid trying to read/write at the same time.
 
+JVM debugParams -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=8080
+
 ## Output
 
 The following files are populated in the conversion process (the release date used will be as per the RF2 file used as input):
