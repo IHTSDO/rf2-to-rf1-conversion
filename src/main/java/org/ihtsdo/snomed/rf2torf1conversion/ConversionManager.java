@@ -46,28 +46,32 @@ public class ConversionManager {
 		knownEditionMap.put(Edition.SPANISH, new EditionFilenameParts("SpanishExtension", "es"));
 	}
 	
-	static Map<String, String> fileToTable = new HashMap<String, String>();
+	static Map<String, String> intfileToTable = new HashMap<String, String>();
 	{
-		fileToTable.put("sct2_Concept_EXTFull_INT_DATE.txt", "rf2_concept_sv");
-		fileToTable.put(EDITION_DETERMINER, "rf2_term_sv");
-		fileToTable.put("sct2_Relationship_EXTFull_INT_DATE.txt", "rf2_rel_sv");
-		fileToTable.put("sct2_StatedRelationship_EXTFull_INT_DATE.txt", "rf2_rel_sv");
-		fileToTable.put("sct2_Identifier_EXTFull_INT_DATE.txt", "rf2_identifier_sv");
-		fileToTable.put("sct2_TextDefinition_EXTFull-en_INT_DATE.txt", "rf2_def_sv");
+		intfileToTable.put("sct2_Concept_EXTFull_INT_DATE.txt", "rf2_concept_sv");
+		intfileToTable.put("sct2_Relationship_EXTFull_INT_DATE.txt", "rf2_rel_sv");
+		intfileToTable.put("sct2_StatedRelationship_EXTFull_INT_DATE.txt", "rf2_rel_sv");
+		intfileToTable.put("sct2_Identifier_EXTFull_INT_DATE.txt", "rf2_identifier_sv");
+	}
+	
+	static Map<String, String> extfileToTable = new HashMap<String, String>();
+	{
+		extfileToTable.put(EDITION_DETERMINER, "rf2_term_sv");
+		extfileToTable.put("sct2_TextDefinition_EXTFull-en_INT_DATE.txt", "rf2_def_sv");
 
-		fileToTable.put("der2_cRefset_AssociationReferenceEXTFull_INT_DATE.txt", "rf2_crefset_sv");
-		fileToTable.put("der2_cRefset_AttributeValueEXTFull_INT_DATE.txt", "rf2_crefset_sv");
-		fileToTable.put("der2_Refset_SimpleEXTFull_INT_DATE.txt", "rf2_refset_sv");
+		extfileToTable.put("der2_cRefset_AssociationReferenceEXTFull_INT_DATE.txt", "rf2_crefset_sv");
+		extfileToTable.put("der2_cRefset_AttributeValueEXTFull_INT_DATE.txt", "rf2_crefset_sv");
+		extfileToTable.put("der2_Refset_SimpleEXTFull_INT_DATE.txt", "rf2_refset_sv");
 
-		fileToTable.put("der2_cRefset_LanguageEXTFull-LNG_INT_DATE.txt", "rf2_crefset_sv");
+		extfileToTable.put("der2_cRefset_LanguageEXTFull-LNG_INT_DATE.txt", "rf2_crefset_sv");
 
-		fileToTable.put("der2_sRefset_SimpleMapEXTFull_INT_DATE.txt", "rf2_srefset_sv");
-		fileToTable.put("der2_iissscRefset_ComplexEXTMapFull_INT_DATE.txt", "rf2_iissscrefset_sv");
-		fileToTable.put("der2_iisssccRefset_ExtendedMapEXTFull_INT_DATE.txt", "rf2_iisssccrefset_sv");
+		extfileToTable.put("der2_sRefset_SimpleMapEXTFull_INT_DATE.txt", "rf2_srefset_sv");
+		extfileToTable.put("der2_iissscRefset_ComplexEXTMapFull_INT_DATE.txt", "rf2_iissscrefset_sv");
+		extfileToTable.put("der2_iisssccRefset_ExtendedMapEXTFull_INT_DATE.txt", "rf2_iisssccrefset_sv");
 
-		fileToTable.put("der2_cciRefset_RefsetDescriptorEXTFull_INT_DATE.txt", "rf2_ccirefset_sv");
-		fileToTable.put("der2_ciRefset_DescriptionTypeEXTFull_INT_DATE.txt", "rf2_cirefset_sv");
-		fileToTable.put("der2_ssRefset_ModuleDependencyEXTFull_INT_DATE.txt", "rf2_ssrefset_sv");
+		extfileToTable.put("der2_cciRefset_RefsetDescriptorEXTFull_INT_DATE.txt", "rf2_ccirefset_sv");
+		extfileToTable.put("der2_ciRefset_DescriptionTypeEXTFull_INT_DATE.txt", "rf2_cirefset_sv");
+		extfileToTable.put("der2_ssRefset_ModuleDependencyEXTFull_INT_DATE.txt", "rf2_ssrefset_sv");
 	}
 
 	public static final Map<String, String> exportMap = new HashMap<String, String>();
@@ -116,33 +120,34 @@ public class ConversionManager {
 		File tempDBLocation = Files.createTempDir();
 		init(args, tempDBLocation);
 		createDatabaseSchema();
-		File loadingArea1 = null;
-		File loadingArea2 = null;
+		File intLoadingArea = null;
+		File extloadingArea = null;
 		File exportArea = null;
 		Stopwatch stopwatch = Stopwatch.createStarted();
 		String completionStatus = "failed";
 		try {
 
 			print("\nExtracting RF2 International Edition Data...");
-			loadingArea1 = unzipArchive(intRf2Archive);
-			intReleaseDate = findDateInString(loadingArea1.listFiles()[0].getName(), false);
-			determineEdition(loadingArea1, Edition.INTERNATIONAL, intReleaseDate);
+			intLoadingArea = unzipArchive(intRf2Archive);
+			intReleaseDate = findDateInString(intLoadingArea.listFiles()[0].getName(), false);
+			determineEdition(intLoadingArea, Edition.INTERNATIONAL, intReleaseDate);
 			
 			if (extRf2Archive != null) {
 				print("\nExtracting RF2 Extension Data...");
-				loadingArea2 = unzipArchive(extRf2Archive);
-				extReleaseDate = findDateInString(loadingArea2.listFiles()[0].getName(), false);
-				determineEdition(loadingArea2, null, extReleaseDate);	
+				extloadingArea = unzipArchive(extRf2Archive);
+				extReleaseDate = findDateInString(extloadingArea.listFiles()[0].getName(), false);
+				determineEdition(extloadingArea, null, extReleaseDate);	
 				isExtension = true;
 			}
 			
-			print("\nLoading " + Edition.INTERNATIONAL +" RF2 Data...");
-			loadRF2Data(loadingArea1,  Edition.INTERNATIONAL, intReleaseDate);
+			print("\nLoading " + Edition.INTERNATIONAL +" common RF2 Data...");
+			loadRF2Data(intLoadingArea,  Edition.INTERNATIONAL, intReleaseDate, intfileToTable);
 			
-			if (isExtension) {
-				print("\nLoading " + edition +" RF2 Data...");
-				loadRF2Data(loadingArea2, edition, extReleaseDate);				
-			}
+			//Load the rest of the files from the same loading area if International Release, otherwise use the extensionLoading  Area
+			File loadingArea = isExtension ? extloadingArea : intLoadingArea;
+			print("\nLoading " + edition +" RF2 Data...");
+			loadRF2Data(loadingArea, edition, extReleaseDate, extfileToTable);				
+
 
 			debug("\nCreating RF2 indexes...");
 			db.executeResource("create_rf2_indexes.sql");
@@ -173,12 +178,12 @@ public class ConversionManager {
 				debug("Error while cleaning up database " + tempDBLocation.getPath() + e.getMessage());
 			}
 			try {
-				if (loadingArea1 != null && loadingArea1.exists()) {
-					FileUtils.deleteDirectory(loadingArea1);
+				if (intLoadingArea != null && intLoadingArea.exists()) {
+					FileUtils.deleteDirectory(intLoadingArea);
 				}
 				
-				if (loadingArea2 != null && loadingArea2.exists()) {
-					FileUtils.deleteDirectory(loadingArea2);
+				if (extloadingArea != null && extloadingArea.exists()) {
+					FileUtils.deleteDirectory(extloadingArea);
 				}
 
 				if (exportArea != null && exportArea.exists()) {
@@ -292,7 +297,7 @@ public class ConversionManager {
 		db.init(dbLocation);
 	}
 
-	private void loadRF2Data(File loadingArea, Edition edition, String releaseDate) throws RF1ConversionException {
+	private void loadRF2Data(File loadingArea, Edition edition, String releaseDate, Map<String, String> fileToTable) throws RF1ConversionException {
 		// We can do the load in parallel. Only 3 threads because heavily I/O
 		db.startParallelProcessing(3);
 		for (Map.Entry<String, String> entry : fileToTable.entrySet()) {
