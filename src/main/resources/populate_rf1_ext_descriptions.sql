@@ -1,8 +1,8 @@
 -- Expecting the following variables to be set by the calling program
-SET c = 'es';
+SET @langCode = 'es';
 SET @langRefSet = 448879004;
 
-UPDATE rf21_term SET LANGUAGECODE = @lang;
+UPDATE rf21_term SET LANGUAGECODE = @langCode;
 
 -- Description types were set to synonym by default, then FSN were picked up, so now just detect preferred for each language
 UPDATE rf21_term t
@@ -43,7 +43,7 @@ INSERT INTO rf21_subsetlist SELECT DISTINCT
 	m.OriginalSubsetID AS OriginalSubsetID, 
 	SUBSTR(@RDATE,0,6)  AS SUBSETVERSION, 
 	m.SubsetName AS SUBSETNAME, 
-	CASE WHEN LEFT(RIGHT(s.refsetId,3),1) = 1 THEN 3 ELSE 1 END AS SUBSETTYPE, 
+	1 AS SUBSETTYPE, 
 	@langCode AS LANGUAGECODE, 
 	'0' AS RealmId, 
 	0 AS CONTEXTID

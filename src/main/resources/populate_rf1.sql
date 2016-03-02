@@ -166,17 +166,16 @@ where c.CONCEPTID in (
 
  -- CTV3
 UPDATE rf21_concept c
-SET c.CTV3ID = (
+SET c.CTV3ID = COALESCE((
 select s.linkedString from rf2_srefset s
 where c.conceptid = s.referencedComponentId
-and s.refSetId = '900000000000497000' );
+and s.refSetId = '900000000000497000' ), 'UNKNOWN');
 
 -- SNOMED RT ID
 UPDATE rf21_concept c
-SET c.SNOMEDID = (select s.linkedString from rf2_srefset s
+SET c.SNOMEDID = COALESCE((select s.linkedString from rf2_srefset s
 where c.conceptid = s.referencedComponentId
-and s.refSetId ='900000000000498005'
-);
+and s.refSetId ='900000000000498005'), 'UNKNOWN');
 
 UPDATE rf21_rel r
 SET r.REFINABILITY = refinabilityFor(r.characteristicType);

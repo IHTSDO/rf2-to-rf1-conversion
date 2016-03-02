@@ -330,7 +330,7 @@ public class ConversionManager {
 			if (file.exists()) {
 				db.load(file, entry.getValue());
 			} else {
-				print("Warning, skipping load of file " + file.getName() + " - no present");
+				print("\nWarning, skipping load of file " + file.getName() + " - not present");
 			}
 		}
 		db.finishParallelProcessing();
