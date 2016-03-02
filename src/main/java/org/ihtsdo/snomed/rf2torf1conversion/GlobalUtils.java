@@ -19,8 +19,8 @@ public class GlobalUtils {
 
 	public static boolean verbose;
 
-	private static double maxOperations = 399;
-	private static double queriesRun = 0;
+	private static long maxOperations = 399;
+	private static long queriesRun = 0;
 
 	public static void print(String msg) {
 		System.out.println(msg);
@@ -87,11 +87,11 @@ public class GlobalUtils {
 		return null;
 	}
 
-	public static double getProgress() {
+	public static long getProgress() {
 		return queriesRun;
 	}
 
-	public static double getMaxOperations() {
+	public static long getMaxOperations() {
 		return maxOperations;
 	}
 

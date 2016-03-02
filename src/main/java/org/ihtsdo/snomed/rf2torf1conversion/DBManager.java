@@ -104,9 +104,9 @@ public class DBManager {
 	}
 
 	public void load(File file, String tableName) throws RF1ConversionException {
-			debug("Loading data into " + tableName + " from " + file.getName());
-			// Field separator set to ASCII 21 = NAK to ensure double quotes (the default separator) are ignored
-			String sql = "INSERT INTO " + tableName + " SELECT * FROM CSVREAD('" + file.getPath() + "', null, 'UTF-8', chr(9), chr(21));";
+		debug("Loading data into " + tableName + " from " + file.getName());
+		// Field separator set to ASCII 21 = NAK to ensure double quotes (the default separator) are ignored
+		String sql = "INSERT INTO " + tableName + " SELECT * FROM CSVREAD('" + file.getPath() + "', null, 'UTF-8', chr(9), chr(21));";
 		runStatement(sql);
 	}
 

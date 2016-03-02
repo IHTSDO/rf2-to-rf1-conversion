@@ -39,7 +39,7 @@ AND EXISTS (
 );
 
 INSERT INTO rf21_subsetlist SELECT DISTINCT 
-	@RDATE || '1' END AS SubsetID, 
+	@RDATE || '1' AS SubsetID, 
 	m.OriginalSubsetID AS OriginalSubsetID, 
 	SUBSTR(@RDATE,0,6)  AS SUBSETVERSION, 
 	m.SubsetName AS SUBSETNAME, 
@@ -50,7 +50,7 @@ INSERT INTO rf21_subsetlist SELECT DISTINCT
 FROM rf2_crefset s 
 	INNER JOIN rf2_subset2refset m 
 		ON s.refsetId = m.refsetId
-WHERE s.refsetid = @langRefSet
+WHERE s.refsetid = @langRefSet;
 
 INSERT INTO rf21_subsets 
 	SELECT m.refsetId AS SubsetId, 
