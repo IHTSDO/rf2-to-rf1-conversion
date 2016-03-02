@@ -29,21 +29,36 @@ public class ConversionManager {
 	
 	enum Edition { INTERNATIONAL, SPANISH };
 	
-	class EditionFilenameParts {
+	class Dialect {
+		String langRefSetId;
+		String langCode;
+		Dialect (String langRefSetId, String langCode) {
+			this.langRefSetId = langRefSetId;
+			this.langCode = langCode;
+		}
+	}
+
+	public final Dialect dialectEs = new Dialect ("448879004","es");
+	public final Dialect dialectGb = new Dialect ("900000000000508004","en-GB");
+	public final Dialect dialectUs = new Dialect ("900000000000509007","en-US");
+	
+	class EditionConfig {
 		String editionName;
-		String language;
-		EditionFilenameParts (String editionName, String language) {
+		String langCode;
+		Dialect[] dialects;
+		EditionConfig (String editionName, String language, Dialect[] dialects) {
 			this.editionName = editionName;
-			this.language = language;
+			this.langCode = language;
+			this.dialects = dialects;
 		}
 	}
 	
 	private static final String EDITION_DETERMINER = "sct2_Description_EXTFull-LNG_INT_DATE.txt";
 	
-	static Map<Edition, EditionFilenameParts> knownEditionMap = new HashMap<Edition, EditionFilenameParts>();
+	static Map<Edition, EditionConfig> knownEditionMap = new HashMap<Edition, EditionConfig>();
 	{
-		knownEditionMap.put(Edition.INTERNATIONAL, new EditionFilenameParts("","en"));   //International Edition has no Extension name
-		knownEditionMap.put(Edition.SPANISH, new EditionFilenameParts("SpanishExtension", "es"));
+		knownEditionMap.put(Edition.INTERNATIONAL, new EditionConfig("","en", new Dialect[]{dialectGb, dialectUs}));   //International Edition has no Extension name
+		knownEditionMap.put(Edition.SPANISH, new EditionConfig("SpanishExtension", "es", new Dialect[]{dialectEs}));
 	}
 	
 	static Map<String, String> intfileToTable = new HashMap<String, String>();
@@ -198,11 +213,11 @@ public class ConversionManager {
 
 	private void determineEdition(File loadingArea, Edition enforceEdition, String releaseDate) throws RF1ConversionException {
 		//Loop through known editions and see if EDITION_DETERMINER file is present
-		for (Map.Entry<Edition, EditionFilenameParts> thisEdition : knownEditionMap.entrySet())
+		for (Map.Entry<Edition, EditionConfig> thisEdition : knownEditionMap.entrySet())
 			for (File thisFile : loadingArea.listFiles()) {
-				EditionFilenameParts parts = thisEdition.getValue();
+				EditionConfig parts = thisEdition.getValue();
 				String target = EDITION_DETERMINER.replace(EXT, parts.editionName)
-									.replace(LNG, parts.language)
+									.replace(LNG, parts.langCode)
 									.replace(DATE, releaseDate);
 				if (thisFile.getName().equals(target)) {
 					this.edition = thisEdition.getKey();
@@ -253,6 +268,12 @@ public class ConversionManager {
 			print("\nSkipping generation of RF1 History.  Set -h parameter if this is required.");
 		}
 		db.executeResource("populate_rf1.sql");
+		if (isExtension) {
+			db.executeResource("populate_rf1_ext_descriptions.sql");
+		} else {
+			db.executeResource("populate_rf1_int_descriptions.sql");
+		}
+		db.executeResource("populate_rf1_associations");
 	}
 
 	private void init(String[] args, File dbLocation) throws RF1ConversionException {
@@ -304,7 +325,7 @@ public class ConversionManager {
 			// Replace DATE in the filename with the actual release date
 			String fileName = entry.getKey().replace(DATE, releaseDate)
 								.replace(EXT, knownEditionMap.get(edition).editionName)
-								.replace(LNG, knownEditionMap.get(edition).language);
+								.replace(LNG, knownEditionMap.get(edition).langCode);
 			File file = new File(loadingArea + File.separator + fileName);
 			if (file.exists()) {
 				db.load(file, entry.getValue());
