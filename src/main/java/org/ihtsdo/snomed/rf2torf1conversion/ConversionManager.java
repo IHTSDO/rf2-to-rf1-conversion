@@ -168,7 +168,6 @@ public class ConversionManager {
 			convert();
 
 			print("\nExporting RF1 to file...");
-			String releaseDate = isExtension? extReleaseDate : intReleaseDate;
 			exportArea = exportRF1Data(releaseDate, knownEditionMap.get(edition));
 
 			print("\nZipping archive");
