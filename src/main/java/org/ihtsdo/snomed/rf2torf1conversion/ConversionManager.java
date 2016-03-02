@@ -160,8 +160,9 @@ public class ConversionManager {
 			
 			//Load the rest of the files from the same loading area if International Release, otherwise use the extensionLoading  Area
 			File loadingArea = isExtension ? extloadingArea : intLoadingArea;
+			String releaseDate = isExtension ? extReleaseDate : intReleaseDate;
 			print("\nLoading " + edition +" RF2 Data...");
-			loadRF2Data(loadingArea, edition, extReleaseDate, extfileToTable);				
+			loadRF2Data(loadingArea, edition, releaseDate, extfileToTable);				
 
 
 			debug("\nCreating RF2 indexes...");
