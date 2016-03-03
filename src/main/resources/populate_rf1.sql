@@ -44,7 +44,8 @@ SELECT
   t.languageCode AS LANGUAGECODE,
   t.moduleSourceFor(moduleId) AS SOURCE
 FROM rf2_term t, rf21_concept c
-WHERE t.conceptid = c.conceptid;
+WHERE t.conceptid = c.conceptid
+AND t.languageCode = @LangCode;
 
 INSERT INTO rf21_def
 SELECT

@@ -5,7 +5,9 @@ import static org.ihtsdo.snomed.rf2torf1conversion.GlobalUtils.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 
@@ -27,6 +29,7 @@ public class ConversionManager {
 	private String LNG = "LNG";
 	private String DATE = "DATE";
 	private String OUT = "OUT";
+	Set<File> filesLoaded = new HashSet<File>();
 	
 	enum Edition { INTERNATIONAL, SPANISH };
 	
@@ -39,7 +42,7 @@ public class ConversionManager {
 		}
 	}
 
-	public final Dialect dialectEs = new Dialect ("448879004","es");
+	public final Dialect dialectEs = new Dialect ("450828004","es");  //Latin American Spanish
 	public final Dialect dialectGb = new Dialect ("900000000000508004","en-GB");
 	public final Dialect dialectUs = new Dialect ("900000000000509007","en-US");
 	
@@ -70,12 +73,16 @@ public class ConversionManager {
 		intfileToTable.put("sct2_Relationship_EXTFull_INT_DATE.txt", "rf2_rel_sv");
 		intfileToTable.put("sct2_StatedRelationship_EXTFull_INT_DATE.txt", "rf2_rel_sv");
 		intfileToTable.put("sct2_Identifier_EXTFull_INT_DATE.txt", "rf2_identifier_sv");
+		//Extensions can use a mix of International and their own descriptions
+		intfileToTable.put(EDITION_DETERMINER, "rf2_term_sv");
 	}
 	
 	static Map<String, String> extfileToTable = new HashMap<String, String>();
 	{
+		//Extension could supplement any file in international edition
+		extfileToTable.putAll(intfileToTable); 
 		extfileToTable.put(EDITION_DETERMINER, "rf2_term_sv");
-		extfileToTable.put("sct2_TextDefinition_EXTFull-en_INT_DATE.txt", "rf2_def_sv");
+		extfileToTable.put("sct2_TextDefinition_EXTFull-LNG_INT_DATE.txt", "rf2_def_sv");
 
 		extfileToTable.put("der2_cRefset_AssociationReferenceEXTFull_INT_DATE.txt", "rf2_crefset_sv");
 		extfileToTable.put("der2_cRefset_AttributeValueEXTFull_INT_DATE.txt", "rf2_crefset_sv");
@@ -105,9 +112,6 @@ public class ConversionManager {
 		exportMap
 				.put("SnomedCT_OUT_INT_DATE/Terminology/Content/sct1_Descriptions_LNG_INT_DATE.txt",
 						"select DESCRIPTIONID, DESCRIPTIONSTATUS, CONCEPTID, TERM, INITIALCAPITALSTATUS, DESC_TYPE as DESCRIPTIONTYPE, LANGUAGECODE from rf21_term");
-
-		exportMap.put("SnomedCT_OUT_INT_DATE/Resources/TextDefinitions/sct1_TextDefinitions_en-US_INT_DATE.txt",
-				"select * from rf21_DEF");
 		exportMap.put("SnomedCT_OUT_INT_DATE/Terminology/History/sct1_ComponentHistory_Core_INT_DATE.txt",
 				"select COMPONENTID, RELEASEVERSION, CHANGETYPE, STATUS, REASON from rf21_COMPONENTHISTORY");
 		exportMap.put("SnomedCT_OUT_INT_DATE/Terminology/History/sct1_References_Core_INT_DATE.txt",
@@ -146,7 +150,18 @@ public class ConversionManager {
 				isExtension = true;
 			}
 			
-			completeOutputMap(knownEditionMap.get(edition));
+			long maxOperations = getMaxOperations();
+			if (isExtension) {
+				maxOperations = includeHistory? maxOperations : 388;
+			} else {
+				maxOperations = includeHistory? maxOperations : 391;
+			}
+			setMaxOperations(maxOperations);
+			
+			EditionConfig config = knownEditionMap.get(edition);
+			completeOutputMap(config);
+			db.runStatement("SET @langCode = '" + config.langCode + "'");
+			db.runStatement("SET @langRefSet = '" + config.dialects[0].langRefSetId + "'");
 			
 			print("\nLoading " + Edition.INTERNATIONAL +" common RF2 Data...");
 			loadRF2Data(intLoadingArea,  Edition.INTERNATIONAL, intReleaseDate, intfileToTable);
@@ -156,7 +171,6 @@ public class ConversionManager {
 			String releaseDate = isExtension ? extReleaseDate : intReleaseDate;
 			print("\nLoading " + edition +" RF2 Data...");
 			loadRF2Data(loadingArea, edition, releaseDate, extfileToTable);				
-
 
 			debug("\nCreating RF2 indexes...");
 			db.executeResource("create_rf2_indexes.sql");
@@ -212,12 +226,16 @@ public class ConversionManager {
 			String fileRoot = archiveName + File.separator + "Subsets" + File.separator + folderName + File.separator;
 			String fileName = "der1_SubsetMembers_"+ editionConfig.langCode + "_INT_DATE.txt";
 			exportMap.put(fileRoot + fileName,
-					"select s.SubsetId, s.MemberID, s.MemberStatus, s.LinkedID from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.SubsetOriginalId = sl.subsetOriginalId AND sl.languageCode = '" + editionConfig.langCode + "'");
+					"select s.SubsetId, s.MemberID, s.MemberStatus, s.LinkedID from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.SubsetOriginalId = sl.subsetOriginalId AND sl.languageCode = ''" + editionConfig.langCode + "'';");
 			
-			fileName = "der1_Subsets_" + editionConfig.langCode + "INT_DATE.txt";
+			fileName = "der1_Subsets_" + editionConfig.langCode + "_INT_DATE.txt";
 			exportMap.put(fileRoot + fileName,
-					"select sl.* from rf21_SUBSETLIST sl where languagecode = '" + editionConfig.langCode + "'");
+					"select sl.* from rf21_SUBSETLIST sl where languagecode = ''" + editionConfig.langCode + "'';");
+			exportMap.put("SnomedCT_OUT_INT_DATE/Resources/TextDefinitions/sct1_TextDefinitions_LNG_INT_DATE.txt",
+					"select * from rf21_DEF");
 		} else {
+			exportMap.put("SnomedCT_OUT_INT_DATE/Resources/TextDefinitions/sct1_TextDefinitions_en-US_INT_DATE.txt",
+					"select * from rf21_DEF");
 			exportMap
 			.put("SnomedCT_OUT_INT_DATE/Subsets/Language-en-GB/der1_SubsetMembers_en-GB_INT_DATE.txt",
 					"select s.SubsetId, s.MemberID, s.MemberStatus, s.LinkedID from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.SubsetOriginalId = sl.subsetOriginalId AND sl.languageCode in (''en'',''en-GB'')");
@@ -347,8 +365,13 @@ public class ConversionManager {
 								.replace(EXT, knownEditionMap.get(edition).editionName)
 								.replace(LNG, knownEditionMap.get(edition).langCode);
 			File file = new File(loadingArea + File.separator + fileName);
-			if (file.exists()) {
+			
+			//Only load each file once
+			if (filesLoaded.contains(file)) {
+				debug ("Skipping " + file.getName() + " already loaded as part of Internation Edition");
+			} else if (file.exists()) {
 				db.load(file, entry.getValue());
+				filesLoaded.add(file);
 			} else {
 				print("\nWarning, skipping load of file " + file.getName() + " - not present");
 			}

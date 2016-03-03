@@ -92,13 +92,17 @@ public class GlobalUtils {
 	}
 
 	public static long getMaxOperations() {
-		return maxOperations;
+		return GlobalUtils.maxOperations;
+	}
+	
+	synchronized public static void setMaxOperations(long maxOperations) {
+		GlobalUtils.maxOperations = maxOperations;
 	}
 
 	synchronized public static void updateProgress() {
 		queriesRun++;
 		if (!verbose && queriesRun <= maxOperations) {
-			double percentageComplete = (queriesRun / maxOperations) * 100d;
+			double percentageComplete = (((double)queriesRun) / ((double)maxOperations)) * 100d;
 			printn("\r" + String.format("%.2f", percentageComplete) + "% complete.");
 		}
 	}

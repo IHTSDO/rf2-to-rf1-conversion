@@ -1,5 +1,5 @@
 tmp*
-SnomedCT_RF1Release_*
+SnomedCT_*
 target
 go.sh
 *.txt

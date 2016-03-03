@@ -1,8 +1,30 @@
 -- Expecting the following variables to be set by the calling program
-SET @langCode = 'es';
-SET @langRefSet = 448879004;
+-- SET @langCode = 'es';
+-- SET @langRefSet = '448879004';
+-- SET @langRefSet = '450828004';
 
-UPDATE rf21_term SET LANGUAGECODE = @langCode;
+-- Also pull in terms from the International Edition which are referenced in the language refset
+INSERT INTO rf21_term
+SELECT
+  t.id AS DESCRIPTIONID,
+  statusFor(t.active) AS DESCRIPTIONSTATUS,
+  t.conceptId AS CONCEPTID,
+  t.term AS TERM,
+  capitalStatusFor(t.caseSignificanceId) AS INITIALCAPITALSTATUS,
+  0 AS US_DESC_TYPE, 
+  0 AS GB_DESC_TYPE,
+  descTypeFor(t.typeId) AS DESC_TYPE, -- assigns all FSNs (3) but labels all other terms as 'synonyms'
+  t.languageCode AS LANGUAGECODE,
+  t.moduleSourceFor(t.moduleId) AS SOURCE
+FROM rf2_term t, rf21_concept c, rf2_crefset lang
+WHERE t.conceptid = c.conceptid
+AND lang.refsetID = @langRefSet
+AND t.id = lang.referencedComponentId
+AND t.languageCode <> @LangCode;
+
+SELECT * from rf21_term where descriptionid = 1000400015;
+
+SELECT * from rf2_term where id = 1000400015;
 
 -- Description types were set to synonym by default, then FSN were picked up, so now just detect preferred for each language
 UPDATE rf21_term t
@@ -51,6 +73,12 @@ FROM rf2_crefset s
 	INNER JOIN rf2_subset2refset m 
 		ON s.refsetId = m.refsetId
 WHERE s.refsetid = @langRefSet;
+
+SELECT count(*) FROM rf2_crefset s 
+WHERE s.refsetid = @langRefSet;
+
+SELECT count(*) FROM rf2_subset2refset m 
+WHERE m.refsetid = @langRefSet;
 
 INSERT INTO rf21_subsets 
 	SELECT m.refsetId AS SubsetId, 

@@ -1,6 +1,4 @@
-UPDATE rf21_term SET LANGUAGECODE = 'en';
--- PARALLEL_END;
--- PARALLEL_START;
+
 -- Set language code as en-GB when no en-US row exists and visa versa
 UPDATE rf21_term t
 SET t.LANGUAGECODE = 'en-GB'

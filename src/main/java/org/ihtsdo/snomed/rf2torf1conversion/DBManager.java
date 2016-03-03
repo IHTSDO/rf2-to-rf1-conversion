@@ -181,7 +181,7 @@ public class DBManager {
 		}
 		
 		public void executeSelect() {
-			if (verbose) {
+			//if (verbose) {
 				try{
 					Connection conn = dbPool.getConnection();
 					Statement stmt = conn.createStatement();
@@ -192,7 +192,7 @@ public class DBManager {
 					for (int i=1; i <= columnCount; i++ ) {
 						header += md.getColumnLabel(i) + "\t";
 					}
-					print(header);
+					print("\n" + header);
 					print(new String(new char[header.length()]).replace("\0", "="));
 	
 					StringBuilder sb = new StringBuilder();
@@ -207,7 +207,7 @@ public class DBManager {
 				} catch (Exception e) {
 					print("Exception during select statement: " + sql + " - " + e.getMessage());
 				}
-			}
+			//}
 			updateProgress();
 		}
 	}

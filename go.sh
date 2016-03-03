@@ -18,7 +18,7 @@ then
   historyFlag="-h"
 fi
 
-
+ramDrive="-u /Volumes/ram_disk"
  
 #java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${verboseFlag} ${historyFlag} ~/Backup/SnomedCT_RF2Release_INT_20160131.zip
-java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${verboseFlag} ${historyFlag} ~/Backup/SnomedCT_RF2Release_INT_20150731.zip ~/Backup/SnomedCT_SpanishRelease-es_INT_20151031.zip
+java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${verboseFlag} ${historyFlag} ${ramDrive} ~/Backup/SnomedCT_RF2Release_INT_20150731.zip ~/Backup/SnomedCT_SpanishRelease-es_INT_20151031.zip
