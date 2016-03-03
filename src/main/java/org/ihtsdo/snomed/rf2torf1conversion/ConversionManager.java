@@ -99,24 +99,27 @@ public class ConversionManager {
 		extfileToTable.put("der2_ssRefset_ModuleDependencyEXTFull_INT_DATE.txt", "rf2_ssrefset_sv");
 	}
 	
-	
-
-	public static Map<String, String> exportMap = new HashMap<String, String>();
+	public static Map<String, String>intExportMap = new HashMap<String, String>();
 	{
 		// The slashes will be replaced with the OS appropriate separator at export time
-		exportMap.put("SnomedCT_OUT_INT_DATE/Terminology/Content/sct1_Concepts_Core_INT_DATE.txt",
+		intExportMap.put("SnomedCT_OUT_INT_DATE/Terminology/Content/sct1_Concepts_Core_INT_DATE.txt",
 				"select CONCEPTID, CONCEPTSTATUS, FULLYSPECIFIEDNAME, CTV3ID, SNOMEDID, ISPRIMITIVE from rf21_concept");
-		exportMap
+		intExportMap
 				.put("SnomedCT_OUT_INT_DATE/Terminology/Content/sct1_Relationships_Core_INT_DATE.txt",
 						"select RELATIONSHIPID,CONCEPTID1,RELATIONSHIPTYPE,CONCEPTID2,CHARACTERISTICTYPE,REFINABILITY,RELATIONSHIPGROUP from rf21_rel");
-		exportMap
+		}	
+
+	public static Map<String, String> extExportMap = new HashMap<String, String>();
+	{
+		// The slashes will be replaced with the OS appropriate separator at export time
+		extExportMap
 				.put("SnomedCT_OUT_INT_DATE/Terminology/Content/sct1_Descriptions_LNG_INT_DATE.txt",
 						"select DESCRIPTIONID, DESCRIPTIONSTATUS, CONCEPTID, TERM, INITIALCAPITALSTATUS, DESC_TYPE as DESCRIPTIONTYPE, LANGUAGECODE from rf21_term");
-		exportMap.put("SnomedCT_OUT_INT_DATE/Terminology/History/sct1_ComponentHistory_Core_INT_DATE.txt",
+		extExportMap.put("SnomedCT_OUT_INT_DATE/Terminology/History/sct1_ComponentHistory_Core_INT_DATE.txt",
 				"select COMPONENTID, RELEASEVERSION, CHANGETYPE, STATUS, REASON from rf21_COMPONENTHISTORY");
-		exportMap.put("SnomedCT_OUT_INT_DATE/Terminology/History/sct1_References_Core_INT_DATE.txt",
+		extExportMap.put("SnomedCT_OUT_INT_DATE/Terminology/History/sct1_References_Core_INT_DATE.txt",
 				"select COMPONENTID, REFERENCETYPE, REFERENCEDID from rf21_REFERENCE");
-		exportMap
+		extExportMap
 				.put("SnomedCT_OUT_INT_DATE/Resources/StatedRelationships/res1_StatedRelationships_Core_INT_DATE.txt",
 						"select RELATIONSHIPID,CONCEPTID1,RELATIONSHIPTYPE,CONCEPTID2,CHARACTERISTICTYPE,REFINABILITY,RELATIONSHIPGROUP from rf21_stated_rel");
 	}
@@ -176,14 +179,17 @@ public class ConversionManager {
 			db.executeResource("create_rf2_indexes.sql");
 
 			print("\nCalculating RF2 snapshot...");
-			calculateRF2Snapshot(intReleaseDate);
+			calculateRF2Snapshot(releaseDate);
 
 			print("\nConverting RF2 to RF1...");
 			convert();
 
 			print("\nExporting RF1 to file...");
-			exportArea = exportRF1Data(releaseDate, knownEditionMap.get(edition));
+			exportArea = Files.createTempDir();
+			exportRF1Data(intExportMap, intReleaseDate, knownEditionMap.get(edition), exportArea);
+			exportRF1Data(extExportMap, extReleaseDate, knownEditionMap.get(edition), exportArea);
 
+			
 			print("\nZipping archive");
 			createArchive(exportArea);
 
@@ -225,26 +231,26 @@ public class ConversionManager {
 			String folderName = "Language-" + editionConfig.langCode;
 			String fileRoot = archiveName + File.separator + "Subsets" + File.separator + folderName + File.separator;
 			String fileName = "der1_SubsetMembers_"+ editionConfig.langCode + "_INT_DATE.txt";
-			exportMap.put(fileRoot + fileName,
+			extExportMap.put(fileRoot + fileName,
 					"select s.SubsetId, s.MemberID, s.MemberStatus, s.LinkedID from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.SubsetOriginalId = sl.subsetOriginalId AND sl.languageCode = ''" + editionConfig.langCode + "'';");
 			
 			fileName = "der1_Subsets_" + editionConfig.langCode + "_INT_DATE.txt";
-			exportMap.put(fileRoot + fileName,
+			extExportMap.put(fileRoot + fileName,
 					"select sl.* from rf21_SUBSETLIST sl where languagecode = ''" + editionConfig.langCode + "'';");
-			exportMap.put("SnomedCT_OUT_INT_DATE/Resources/TextDefinitions/sct1_TextDefinitions_LNG_INT_DATE.txt",
+			extExportMap.put("SnomedCT_OUT_INT_DATE/Resources/TextDefinitions/sct1_TextDefinitions_LNG_INT_DATE.txt",
 					"select * from rf21_DEF");
 		} else {
-			exportMap.put("SnomedCT_OUT_INT_DATE/Resources/TextDefinitions/sct1_TextDefinitions_en-US_INT_DATE.txt",
+			extExportMap.put("SnomedCT_OUT_INT_DATE/Resources/TextDefinitions/sct1_TextDefinitions_en-US_INT_DATE.txt",
 					"select * from rf21_DEF");
-			exportMap
+			extExportMap
 			.put("SnomedCT_OUT_INT_DATE/Subsets/Language-en-GB/der1_SubsetMembers_en-GB_INT_DATE.txt",
 					"select s.SubsetId, s.MemberID, s.MemberStatus, s.LinkedID from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.SubsetOriginalId = sl.subsetOriginalId AND sl.languageCode in (''en'',''en-GB'')");
-			exportMap.put("SnomedCT_OUT_INT_DATE/Subsets/Language-en-GB/der1_Subsets_en-GB_INT_DATE.txt",
+			extExportMap.put("SnomedCT_OUT_INT_DATE/Subsets/Language-en-GB/der1_Subsets_en-GB_INT_DATE.txt",
 					"select sl.* from rf21_SUBSETLIST sl where languagecode like ''%GB%''");
-			exportMap
+			extExportMap
 					.put("SnomedCT_OUT_INT_DATE/Subsets/Language-en-US/der1_SubsetMembers_en-US_INT_DATE.txt",
 							"select s.SubsetId, s.MemberID, s.MemberStatus, s.LinkedID from rf21_SUBSETS s, rf21_SUBSETLIST sl where s.SubsetOriginalId = sl.subsetOriginalId AND sl.languageCode in (''en'',''en-US'')");
-			exportMap.put("SnomedCT_RF1Release_INT_DATE/Subsets/Language-en-US/der1_Subsets_en-US_INT_DATE.txt",
+			extExportMap.put("SnomedCT_RF1Release_INT_DATE/Subsets/Language-en-US/der1_Subsets_en-US_INT_DATE.txt",
 			"select sl.* from rf21_SUBSETLIST sl where languagecode like ''%US%''");
 		}
 	}
@@ -379,8 +385,7 @@ public class ConversionManager {
 		db.finishParallelProcessing();
 	}
 
-	private File exportRF1Data(String releaseDate, EditionConfig editionConfig) throws RF1ConversionException {
-		File tempExportLocation = Files.createTempDir();
+	private void exportRF1Data(Map<String, String> exportMap, String releaseDate, EditionConfig editionConfig, File exportArea) throws RF1ConversionException {
 		// We can do the export in parallel. Only 3 threads because heavily I/O
 		db.startParallelProcessing(3);
 		for (Map.Entry<String, String> entry : exportMap.entrySet()) {
@@ -388,11 +393,10 @@ public class ConversionManager {
 			String fileName = entry.getKey().replace(DATE, releaseDate)
 					.replace(OUT, editionConfig.outputName)
 					.replace(LNG, editionConfig.langCode);
-			String filePath = tempExportLocation + File.separator + fileName;
+			String filePath = exportArea + File.separator + fileName;
 			db.export(filePath, entry.getValue());
 		}
 		db.finishParallelProcessing();
-		return tempExportLocation;
 	}
 
 }
