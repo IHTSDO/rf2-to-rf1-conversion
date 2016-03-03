@@ -75,6 +75,17 @@ public class ConversionManager {
 		intfileToTable.put("sct2_Identifier_EXTFull_INT_DATE.txt", "rf2_identifier_sv");
 		//Extensions can use a mix of International and their own descriptions
 		intfileToTable.put(EDITION_DETERMINER, "rf2_term_sv");
+		
+		//Concepts still need inactivation reasons from the International Edition
+		intfileToTable.put("der2_cRefset_AssociationReferenceEXTFull_INT_DATE.txt", "rf2_crefset_sv");
+		intfileToTable.put("der2_cRefset_AttributeValueEXTFull_INT_DATE.txt", "rf2_crefset_sv");
+		
+		
+		//CTV3 and SNOMED RT Identifiers come from the International Edition
+		intfileToTable.put("der2_sRefset_SimpleMapEXTFull_INT_DATE.txt", "rf2_srefset_sv");
+		intfileToTable.put("der2_iissscRefset_ComplexEXTMapFull_INT_DATE.txt", "rf2_iissscrefset_sv");
+		intfileToTable.put("der2_iisssccRefset_ExtendedMapEXTFull_INT_DATE.txt", "rf2_iisssccrefset_sv");
+
 	}
 	
 	static Map<String, String> extfileToTable = new HashMap<String, String>();

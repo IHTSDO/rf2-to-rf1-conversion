@@ -18,7 +18,7 @@ WHERE NOT EXISTS (
 
 CREATE UNIQUE INDEX CONCEPT_CUI_X ON rf21_concept(CONCEPTID);
 
-SET @FullySpecifiedName = '900000000000003001';
+SET @FSN = '900000000000003001';
 SET @Definition = '900000000000550004';
 SET @EntireTermCaseSensitive = '900000000000017005';
 SET @Stated = '900000000000010007';
@@ -29,6 +29,7 @@ SET @Preferred = '900000000000548007';
 SET @ISA = '116680003';
 SET @CInactivationRefSet = '900000000000489007';
 SET @DInactivationRefSet = '900000000000490003';
+SET @IntLangCode = 'en';
 -- PARALLEL_START;
 
 INSERT INTO rf21_term
@@ -201,12 +202,14 @@ WHERE EXISTS (
 	AND c.conceptstatus = 6 )
 AND t.DESCRIPTIONSTATUS = 8;
 
+--Pull the FSN directly from the RF2
 UPDATE rf21_concept c
 SET c.FULLYSPECIFIEDNAME = ( 
-	select t.term from rf21_term t
+	select t.term from rf2_term t
 	where t.conceptid = c.conceptid
-	and t.DESC_TYPE = 3 
-	and t.DESCRIPTIONSTATUS IN (0,6,8,11));
+	and t.typeId = @FSN 
+	and t.active = 1
+	and t.languageCode = @IntLangCode);
 	
 UPDATE rf21_def d
 SET d.FULLYSPECIFIEDNAME = (
