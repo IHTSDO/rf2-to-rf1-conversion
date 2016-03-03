@@ -186,8 +186,8 @@ public class ConversionManager {
 
 			print("\nExporting RF1 to file...");
 			exportArea = Files.createTempDir();
-			exportRF1Data(intExportMap, intReleaseDate, knownEditionMap.get(edition), exportArea);
-			exportRF1Data(extExportMap, extReleaseDate, knownEditionMap.get(edition), exportArea);
+			exportRF1Data(intExportMap, extReleaseDate, intReleaseDate, knownEditionMap.get(edition), exportArea);
+			exportRF1Data(extExportMap, extReleaseDate, extReleaseDate, knownEditionMap.get(edition), exportArea);
 
 			
 			print("\nZipping archive");
@@ -385,12 +385,13 @@ public class ConversionManager {
 		db.finishParallelProcessing();
 	}
 
-	private void exportRF1Data(Map<String, String> exportMap, String releaseDate, EditionConfig editionConfig, File exportArea) throws RF1ConversionException {
+	private void exportRF1Data(Map<String, String> exportMap, String packageReleaseDate, String fileReleaseDate, EditionConfig editionConfig, File exportArea) throws RF1ConversionException {
 		// We can do the export in parallel. Only 3 threads because heavily I/O
 		db.startParallelProcessing(3);
 		for (Map.Entry<String, String> entry : exportMap.entrySet()) {
 			// Replace DATE in the filename with the actual release date
-			String fileName = entry.getKey().replace(DATE, releaseDate)
+			String fileName = entry.getKey().replaceFirst(DATE, packageReleaseDate)
+					.replace(DATE, fileReleaseDate)
 					.replace(OUT, editionConfig.outputName)
 					.replace(LNG, editionConfig.langCode);
 			String filePath = exportArea + File.separator + fileName;
