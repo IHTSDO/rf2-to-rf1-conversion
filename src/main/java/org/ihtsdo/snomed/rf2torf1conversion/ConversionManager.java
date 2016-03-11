@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
@@ -24,6 +25,7 @@ public class ConversionManager {
 	String extReleaseDate;
 	boolean includeHistory = false;
 	boolean isExtension = false;
+	boolean goInteractive = false;
 	Edition edition;
 	private String EXT = "EXT";
 	private String LNG = "LNG";
@@ -76,10 +78,12 @@ public class ConversionManager {
 		//Extensions can use a mix of International and their own descriptions
 		intfileToTable.put(EDITION_DETERMINER, "rf2_term_sv");
 		
+		//We need to know the International Preferred Term if the Extension doesn't specify one
+		intfileToTable.put("der2_cRefset_LanguageEXTFull-LNG_INT_DATE.txt", "rf2_crefset_sv");
+		
 		//Concepts still need inactivation reasons from the International Edition
 		intfileToTable.put("der2_cRefset_AssociationReferenceEXTFull_INT_DATE.txt", "rf2_crefset_sv");
-		intfileToTable.put("der2_cRefset_AttributeValueEXTFull_INT_DATE.txt", "rf2_crefset_sv");
-		
+		intfileToTable.put("der2_cRefset_AttributeValueEXTFull_INT_DATE.txt", "rf2_crefset_sv");	
 		
 		//CTV3 and SNOMED RT Identifiers come from the International Edition
 		intfileToTable.put("der2_sRefset_SimpleMapEXTFull_INT_DATE.txt", "rf2_srefset_sv");
@@ -205,6 +209,10 @@ public class ConversionManager {
 			createArchive(exportArea);
 
 			completionStatus = "completed";
+			
+			if (goInteractive) {
+				doInteractive();
+			}
 		} finally {
 			print("\nProcess " + completionStatus + " in " + stopwatch + " after completing " + getProgress() + "/" + getMaxOperations()
 					+ " operations.");
@@ -234,6 +242,32 @@ public class ConversionManager {
 			}
 		}
 		
+	}
+
+	private void doInteractive() {
+		boolean quitDetected = false;
+		StringBuilder buff = new StringBuilder();
+		try (Scanner in = new Scanner(System.in)) {
+			print ("Enter sql command to run, terminate with semicolon or type quit; to finish");
+			while (!quitDetected) {
+				buff.append(in.nextLine().trim());
+				if (buff.length() > 1 && buff.charAt(buff.length()-1) == ';') {
+					String command = buff.toString();
+					if (command.equalsIgnoreCase("quit;")) {
+						quitDetected = true;
+					} else {
+						try{
+							db.runStatement(command.toString());
+						} catch (Exception e) {
+						    e.printStackTrace();
+						}
+						buff.setLength(0);
+					}
+				} else {
+					buff.append(" ");
+				}
+			}
+		}
 	}
 
 	private void completeOutputMap(EditionConfig editionConfig) {
@@ -333,7 +367,7 @@ public class ConversionManager {
 
 	private void init(String[] args, File dbLocation) throws RF1ConversionException {
 		if (args.length < 1) {
-			print("Usage: java ConversionManager [-v] [-u <unzip location>] <rf2 archive location> [<rf2 extension archive>]");
+			print("Usage: java ConversionManager [-v] [-h] [-i] [-u <unzip location>] <rf2 archive location> [<rf2 extension archive>]");
 			exit();
 		}
 		boolean isUnzipLocation = false;
@@ -341,6 +375,8 @@ public class ConversionManager {
 		for (String thisArg : args) {
 			if (thisArg.equals("-v")) {
 				GlobalUtils.verbose = true;
+			} else if (thisArg.equals("-i")) {
+				goInteractive = true;
 			} else if (thisArg.equals("-h")) {
 				includeHistory = true;
 			} else if (thisArg.equals("-u")) {

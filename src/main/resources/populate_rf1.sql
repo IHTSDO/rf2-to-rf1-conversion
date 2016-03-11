@@ -1,3 +1,5 @@
+--TODO Find another way to identify metadata concepts, or pull in search 
+--phrase as part of extension configuration
 INSERT INTO rf21_concept
 SELECT DISTINCT
   id AS CONCEPTID,
@@ -13,12 +15,15 @@ WHERE NOT EXISTS (
 	SELECT 1 FROM rf2_term t
 	WHERE c.id = t.conceptid
 	AND t.typeid = 900000000000003001 --fsn
-	AND t.term like '%metadata concept)'
+	AND ( t.term like '%metadata concept)' OR t.term like '%metadato fundacional)'
+	OR t.term like '%metadato del núcleo)' )
 );
 
 CREATE UNIQUE INDEX CONCEPT_CUI_X ON rf21_concept(CONCEPTID);
 
 SET @FSN = '900000000000003001';
+SET @SYN = '900000000000013009';
+SET @ISA = '116680003';
 SET @Definition = '900000000000550004';
 SET @EntireTermCaseSensitive = '900000000000017005';
 SET @Stated = '900000000000010007';
@@ -26,11 +31,9 @@ SET @USRefSet = '900000000000509007'; /* United States of America English langua
 SET @GBRefSet = '900000000000508004'; /* Great Britain English language reference set (foundation metadata concept) */
 SET @Acceptable = '900000000000549004';
 SET @Preferred = '900000000000548007';
-SET @ISA = '116680003';
 SET @CInactivationRefSet = '900000000000489007';
 SET @DInactivationRefSet = '900000000000490003';
 SET @IntLangCode = 'en';
--- PARALLEL_START;
 
 INSERT INTO rf21_term
 SELECT
@@ -89,7 +92,7 @@ AND r.destinationId = c2.conceptid;
 -- PARALLEL_END;
 
 CREATE INDEX idx_21t_cid ON rf21_term(CONCEPTID);
-CREATE UNIQUE INDEX idx_21t_did ON rf21_term(descriptionId);
+CREATE /*UNIQUE*/ INDEX idx_21t_did ON rf21_term(descriptionId);
 CREATE INDEX idx_21t_ds ON rf21_term(descriptionStatus);
 
 CREATE INDEX IDX_REL_CUI1_X ON rf21_rel(CONCEPTID1);
@@ -139,8 +142,6 @@ MERGE INTO rf2_srefset (id, effectiveTime, active, moduleId, refSetId, reference
 KEY (referencedComponentId, refsetId)
 Values ('DUMMY', '00000000', 1, 900000000000207008, 900000000000498005, 467614008, 'R-FD64C' );
 
--- PARALLEL_END;
--- PARALLEL_START;
 
 /* Concepts in the FULL tables but NOT in the snapshot must be EITHER some flavour of inactive OR pending move 
    Determine the reason for inactivation, or pending move status, from the appropriate refset
@@ -165,42 +166,26 @@ where c.CONCEPTID in (
 	where s3.refSetId = @CInactivationRefSet
 	and s3.active = 1
 	and s3.referencedComponentId = c.CONCEPTID);
+	
+SELECT * from rf2_srefset
+where refSetId = '900000000000497000'
+AND referencedComponentId = 100000000;
 
  -- CTV3
 UPDATE rf21_concept c
-SET c.CTV3ID = COALESCE((
+SET c.CTV3ID = COALESCE(
 select s.linkedString from rf2_srefset s
 where c.conceptid = s.referencedComponentId
-and s.refSetId = '900000000000497000' ), 'UNKNOWN');
+and s.refSetId = '900000000000497000' , 'UNKNOWN');
 
 -- SNOMED RT ID
 UPDATE rf21_concept c
-SET c.SNOMEDID = COALESCE((select s.linkedString from rf2_srefset s
+SET c.SNOMEDID = COALESCE(select s.linkedString from rf2_srefset s
 where c.conceptid = s.referencedComponentId
-and s.refSetId ='900000000000498005'), 'UNKNOWN');
+and s.refSetId ='900000000000498005', 'UNKNOWN');
 
 UPDATE rf21_rel r
 SET r.REFINABILITY = refinabilityFor(r.characteristicType);
-
---Where term is has inactivation reason, set the description status
-UPDATE rf21_term t
-SET t.DESCRIPTIONSTATUS = COALESCE (
-	(select magicNumberFor(s.linkedComponentId)
-	from rf2_crefset s
-	where s.referencedComponentId = t.descriptionid
-	and s.refSetId = @DInactivationRefSet
-	AND s.active = 1),t.descriptionstatus);
--- PARALLEL_END;
-
-
--- Where the concept has limited status (6), the description should too
-UPDATE rf21_term t
-SET t.DESCRIPTIONSTATUS = 6
-WHERE EXISTS (
-	SELECT 1 FROM rf21_concept c
-	WHERE t.conceptid = c.conceptid
-	AND c.conceptstatus = 6 )
-AND t.DESCRIPTIONSTATUS = 8;
 
 --Pull the FSN directly from the RF2
 UPDATE rf21_concept c

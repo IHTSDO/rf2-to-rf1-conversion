@@ -68,8 +68,6 @@ create table tmp_inactive_preferred AS
 	
 create index idx_tmp_ip_id on tmp_inactive_preferred(descriptionId);
 
-SELECT count(*) from tmp_inactive_preferred;
-
 UPDATE rf21_term t
 SET t.DESC_TYPE = 1
 WHERE descriptionStatus <> 0
@@ -79,11 +77,27 @@ AND EXISTS (
 	where t.descriptionId = tt.descriptionId
 );
 
+--Where term is has inactivation reason, set the description status
+UPDATE rf21_term t
+SET t.DESCRIPTIONSTATUS = COALESCE (
+	select magicNumberFor(s.linkedComponentId)
+	from rf2_crefset s
+	where s.referencedComponentId = t.descriptionid
+	and s.refSetId = @DInactivationRefSet
+	AND s.active = 1,t.descriptionstatus);
+
+
+-- Where the concept has limited status (6), the description should too
+UPDATE rf21_term t
+SET t.DESCRIPTIONSTATUS = 6
+WHERE EXISTS (
+	SELECT 1 FROM rf21_concept c
+	WHERE t.conceptid = c.conceptid
+	AND c.conceptstatus = 6 )
+AND t.DESCRIPTIONSTATUS = 8;
+
 -- Where the description is acceptable in one dialect and preferred in the other, set the 
 -- common description type to 0 - unspecified;
-
-SELECT * from rf21_term where descriptionid = 2667522010;
-SELECT * from rf2_crefset where referencedComponentId = 2667522010;
 
 UPDATE rf21_term t
 SET t.DESC_TYPE = 0

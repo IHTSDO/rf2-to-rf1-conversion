@@ -155,12 +155,12 @@ public class DBManager {
 		public void run() {
 			// Only need to do these if we're outputting verbose debug information
 			try {
-				debug("Running: " + sql);
+				debug("\nRunning: " + sql);
 				Long rowsUpdated = null;
 				long startTime = System.currentTimeMillis();
 				if (sql.startsWith("STOP")) {
 					throw new RuntimeException("Manually stated \"STOP\" encountered");
-				} else if (sql.startsWith("SELECT")) {
+				} else if (sql.startsWith("SELECT") || sql.startsWith("SHOW")) {
 					executeSelect();
 				} else {
 					Connection conn = dbPool.getConnection();

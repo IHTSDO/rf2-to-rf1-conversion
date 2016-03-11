@@ -6,4 +6,4 @@ INSERT INTO RF2_subset2refset (originalSubsetId, SubsetName, RefsetId, fsn, loca
 values (100033, 'US English Language reference set', 900000000000509007, 'United States of America English language reference set (foundation metadata concept)','Refset/Content/');
 
 INSERT INTO RF2_subset2refset (originalSubsetId, SubsetName, RefsetId, fsn, location) 
-values (103030, 'Spanish Latin American Language reference set', 450828004, 'Spanish language reference set (foundation metadata concept)','Refset/Content/');
+values (103030, 'Spanish Language Edition', 450828004, 'Spanish language reference set (foundation metadata concept)','Refset/Content/');
