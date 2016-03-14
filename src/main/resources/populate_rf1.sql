@@ -167,10 +167,6 @@ where c.CONCEPTID in (
 	and s3.active = 1
 	and s3.referencedComponentId = c.CONCEPTID);
 	
-SELECT * from rf2_srefset
-where refSetId = '900000000000497000'
-AND referencedComponentId = 100000000;
-
  -- CTV3
 UPDATE rf21_concept c
 SET c.CTV3ID = COALESCE(

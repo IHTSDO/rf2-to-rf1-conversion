@@ -79,6 +79,7 @@ AND l.referencedComponentId = t.id
 AND l.refsetid = @USRefSet
 AND l.linkedComponentId = @Preferred
 AND t.active = 1
+AND l.active = 1
 AND t.typeId = @SYN
 AND t2.descriptionId IS NULL;
 
