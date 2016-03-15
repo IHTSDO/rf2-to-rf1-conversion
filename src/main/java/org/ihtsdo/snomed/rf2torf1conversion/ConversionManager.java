@@ -166,7 +166,7 @@ public class ConversionManager {
 				extReleaseDate = findDateInString(extloadingArea.listFiles()[0].getName(), false);
 				determineEdition(extloadingArea, null, extReleaseDate);	
 				isExtension = true;
-			}
+			} 
 			
 			long maxOperations = getMaxOperations();
 			if (isExtension) {
@@ -201,8 +201,8 @@ public class ConversionManager {
 
 			print("\nExporting RF1 to file...");
 			exportArea = Files.createTempDir();
-			exportRF1Data(intExportMap, extReleaseDate, intReleaseDate, knownEditionMap.get(edition), exportArea);
-			exportRF1Data(extExportMap, extReleaseDate, extReleaseDate, knownEditionMap.get(edition), exportArea);
+			exportRF1Data(intExportMap, releaseDate, intReleaseDate, knownEditionMap.get(edition), exportArea);
+			exportRF1Data(extExportMap, releaseDate, releaseDate, knownEditionMap.get(edition), exportArea);
 
 			
 			print("\nZipping archive");
