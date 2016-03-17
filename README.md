@@ -5,8 +5,9 @@ and covered by the Open Government License http://www.nationalarchives.gov.uk/do
 
 This RF2 to RF1 conversion works solely from the data available in an RF2 archive.  As such, some items such as qualifier relationships are not available.
 
+The tools is also currently able to handle the Spanish Edition by specifying an optional additional zip archive.
 
-Usage:<code>java -jar [JVM Options] RF2toRF1Converter.jar [Processing Flags] <RF2 archive location>  </code>
+Usage:<code>java -jar [JVM Options] RF2toRF1Converter.jar [Processing Flags] <RF2 international archive location>  [<RF2 extension archive location>]</code>
 
 eg  <code>java -jar -Xmx4g RF2toRF1Converter.jar /Backup/SnomedCT_RF2Release_INT_20160131.zip</code>
 
@@ -17,6 +18,8 @@ eg  <code>java -jar -Xmx4g RF2toRF1Converter.jar /Backup/SnomedCT_RF2Release_INT
 -v	Show all queries being run (verbose)
 
 -u	Specify location for unzip eg difference physical drive to avoid trying to read/write at the same time.
+
+JVM debugParams -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=8080
 
 ## Output
 

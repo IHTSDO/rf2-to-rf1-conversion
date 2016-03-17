@@ -104,9 +104,9 @@ public class DBManager {
 	}
 
 	public void load(File file, String tableName) throws RF1ConversionException {
-			debug("Loading data into " + tableName + " from " + file.getName());
-			// Field separator set to ASCII 21 = NAK to ensure double quotes (the default separator) are ignored
-			String sql = "INSERT INTO " + tableName + " SELECT * FROM CSVREAD('" + file.getPath() + "', null, 'UTF-8', chr(9), chr(21));";
+		debug("Loading data into " + tableName + " from " + file.getName());
+		// Field separator set to ASCII 21 = NAK to ensure double quotes (the default separator) are ignored
+		String sql = "INSERT INTO " + tableName + " SELECT * FROM CSVREAD('" + file.getPath() + "', null, 'UTF-8', chr(9), chr(21));";
 		runStatement(sql);
 	}
 
@@ -155,12 +155,12 @@ public class DBManager {
 		public void run() {
 			// Only need to do these if we're outputting verbose debug information
 			try {
-				debug("Running: " + sql);
+				debug("\nRunning: " + sql);
 				Long rowsUpdated = null;
 				long startTime = System.currentTimeMillis();
 				if (sql.startsWith("STOP")) {
 					throw new RuntimeException("Manually stated \"STOP\" encountered");
-				} else if (sql.startsWith("SELECT")) {
+				} else if (sql.startsWith("SELECT") || sql.startsWith("SHOW")) {
 					executeSelect();
 				} else {
 					Connection conn = dbPool.getConnection();
@@ -181,7 +181,7 @@ public class DBManager {
 		}
 		
 		public void executeSelect() {
-			if (verbose) {
+			//if (verbose) {
 				try{
 					Connection conn = dbPool.getConnection();
 					Statement stmt = conn.createStatement();
@@ -192,7 +192,7 @@ public class DBManager {
 					for (int i=1; i <= columnCount; i++ ) {
 						header += md.getColumnLabel(i) + "\t";
 					}
-					print(header);
+					print("\n" + header);
 					print(new String(new char[header.length()]).replace("\0", "="));
 	
 					StringBuilder sb = new StringBuilder();
@@ -207,7 +207,7 @@ public class DBManager {
 				} catch (Exception e) {
 					print("Exception during select statement: " + sql + " - " + e.getMessage());
 				}
-			}
+			//}
 			updateProgress();
 		}
 	}
