@@ -3,7 +3,10 @@ package org.ihtsdo.snomed.rf2torf1conversion;
 import static org.ihtsdo.snomed.rf2torf1conversion.GlobalUtils.*;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -17,6 +20,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.io.IOUtils;
 import org.h2.jdbcx.JdbcConnectionPool;
 
 import com.google.common.base.Charsets;
@@ -118,7 +122,7 @@ public class DBManager {
 			dbPool.dispose();
 	}
 
-	public void export(String outputFilePath, String selectionSql) throws RF1ConversionException {
+	public void export(String outputFilePath, String selectionSql, InputStream includeStream) throws RF1ConversionException {
 			// Make the path separator compatible with the OS
 			outputFilePath = outputFilePath.replace(DEFAULT_FILE_SEPARATOR, File.separator);
 
@@ -132,6 +136,17 @@ public class DBManager {
 			String sql = "CALL CSVWRITE('" + outputFile.getPath() + "', '" + selectionSql + "',"
 					+ "'charset=UTF-8 lineSeparator=' || CHAR(13) || CHAR(10) ||' fieldSeparator=' || CHAR(9) || ' fieldDelimiter= escape=');";
 			runStatement(sql);
+			
+			if (includeStream != null) {
+				debug ("Including additional resource...");
+				try {
+					OutputStream os = new FileOutputStream (outputFile, true);
+					IOUtils.copy(includeStream, os);
+					os.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 	}
 	
 	public void runStatement(String sql) {

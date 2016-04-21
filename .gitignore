@@ -3,3 +3,4 @@ SnomedCT_*
 target
 go.sh
 *.txt
+.*

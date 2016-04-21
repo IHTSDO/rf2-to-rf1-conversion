@@ -1,6 +1,9 @@
 
 CREATE ALIAS magicNumberFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.getMagicNumber";
 
+CREATE ALIAS magicNumberDebug FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.getMagicNumberDebug";
+
+
 CREATE ALIAS moduleSourceFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.getModuleSource";
 
 CREATE ALIAS statusFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.translateActive";
@@ -132,6 +135,6 @@ CREATE TABLE rf21_COMPONENTHISTORY (
 	CHANGETYPE		CHAR (2) NOT NULL,
 	STATUS			CHAR (2) NOT NULL,
 	REASON			VARCHAR(255),
-	ISCONCEPT		BOOLEAN NOT NULL,
+	ISCONCEPT		BOOLEAN,
 	PREVIOUSVERSION	BIGINT);
 	

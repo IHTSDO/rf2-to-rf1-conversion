@@ -155,6 +155,13 @@ public class RF1Constants {
 		}
 		return null;
 	}
+	
+	public static Byte getMagicNumberDebug(String refsetId, String sctid) {
+		if (rf1Map.containsKey(sctid)) {
+			return rf1Map.get(sctid);
+		}
+		return null;
+	}
 
 	private static Map<String, String> sourceMap = new HashMap<String, String>();
 	static {

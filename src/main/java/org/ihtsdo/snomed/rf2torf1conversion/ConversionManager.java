@@ -4,6 +4,7 @@ import static org.ihtsdo.snomed.rf2torf1conversion.GlobalUtils.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -24,6 +25,7 @@ public class ConversionManager {
 	String intReleaseDate;
 	String extReleaseDate;
 	boolean includeHistory = false;
+	boolean onlyHistory = false;
 	boolean isExtension = false;
 	boolean goInteractive = false;
 	Edition edition;
@@ -31,6 +33,7 @@ public class ConversionManager {
 	private String LNG = "LNG";
 	private String DATE = "DATE";
 	private String OUT = "OUT";
+	private String ANCIENT_HISTORY = "/sct1_ComponentHistory_Core_INT_20130131.txt";
 	Set<File> filesLoaded = new HashSet<File>();
 	
 	enum Edition { INTERNATIONAL, SPANISH };
@@ -130,8 +133,6 @@ public class ConversionManager {
 		extExportMap
 				.put("SnomedCT_OUT_INT_DATE/Terminology/Content/sct1_Descriptions_LNG_INT_DATE.txt",
 						"select DESCRIPTIONID, DESCRIPTIONSTATUS, CONCEPTID, TERM, INITIALCAPITALSTATUS, DESC_TYPE as DESCRIPTIONTYPE, LANGUAGECODE from rf21_term");
-		extExportMap.put("SnomedCT_OUT_INT_DATE/Terminology/History/sct1_ComponentHistory_Core_INT_DATE.txt",
-				"select COMPONENTID, RELEASEVERSION, CHANGETYPE, STATUS, REASON from rf21_COMPONENTHISTORY");
 		extExportMap.put("SnomedCT_OUT_INT_DATE/Terminology/History/sct1_References_Core_INT_DATE.txt",
 				"select COMPONENTID, REFERENCETYPE, REFERENCEDID from rf21_REFERENCE");
 		extExportMap
@@ -192,9 +193,11 @@ public class ConversionManager {
 
 			debug("\nCreating RF2 indexes...");
 			db.executeResource("create_rf2_indexes.sql");
-
-			print("\nCalculating RF2 snapshot...");
-			calculateRF2Snapshot(releaseDate);
+			
+			if (!onlyHistory) {
+				print("\nCalculating RF2 snapshot...");
+				calculateRF2Snapshot(releaseDate);
+			}
 
 			print("\nConverting RF2 to RF1...");
 			convert();
@@ -298,6 +301,11 @@ public class ConversionManager {
 			extExportMap.put("SnomedCT_RF1Release_INT_DATE/Subsets/Language-en-US/der1_Subsets_en-US_INT_DATE.txt",
 			"select sl.* from rf21_SUBSETLIST sl where languagecode like ''%US%''");
 		}
+		
+		if (includeHistory) {
+			extExportMap.put("SnomedCT_OUT_INT_DATE/Terminology/History/sct1_ComponentHistory_Core_INT_DATE.txt",
+					"select COMPONENTID, RELEASEVERSION, CHANGETYPE, STATUS, REASON from rf21_COMPONENTHISTORY");
+		}
 	}
 
 	private void determineEdition(File loadingArea, Edition enforceEdition, String releaseDate) throws RF1ConversionException {
@@ -356,13 +364,16 @@ public class ConversionManager {
 		} else {
 			print("\nSkipping generation of RF1 History.  Set -h parameter if this is required.");
 		}
-		db.executeResource("populate_rf1.sql");
-		if (isExtension) {
-			db.executeResource("populate_rf1_ext_descriptions.sql");
-		} else {
-			db.executeResource("populate_rf1_int_descriptions.sql");
+		
+		if (!onlyHistory) {
+			db.executeResource("populate_rf1.sql");
+			if (isExtension) {
+				db.executeResource("populate_rf1_ext_descriptions.sql");
+			} else {
+				db.executeResource("populate_rf1_int_descriptions.sql");
+			}
+			db.executeResource("populate_rf1_associations.sql");
 		}
-		db.executeResource("populate_rf1_associations.sql");
 	}
 
 	private void init(String[] args, File dbLocation) throws RF1ConversionException {
@@ -379,6 +390,9 @@ public class ConversionManager {
 				goInteractive = true;
 			} else if (thisArg.equals("-h")) {
 				includeHistory = true;
+			} else if (thisArg.equals("-H")) {
+				includeHistory = true;
+				onlyHistory = true;
 			} else if (thisArg.equals("-u")) {
 				isUnzipLocation = true;
 			} else if (isUnzipLocation) {
@@ -442,7 +456,18 @@ public class ConversionManager {
 					.replace(OUT, editionConfig.outputName)
 					.replace(LNG, editionConfig.langCode);
 			String filePath = exportArea + File.separator + fileName;
-			db.export(filePath, entry.getValue());
+			
+			//If we're doing the history file, then we need to prepend the static
+			//resource file
+			InputStream isInclude = null;
+			if (includeHistory && fileName.contains("ComponentHistory")) {
+				isInclude = ConversionManager.class.getResourceAsStream(ANCIENT_HISTORY);
+				if (isInclude == null) {
+					throw new RF1ConversionException("Unable to obtain history file: " + ANCIENT_HISTORY);
+				}
+			}
+			
+			db.export(filePath, entry.getValue(), isInclude);
 		}
 		db.finishParallelProcessing();
 	}

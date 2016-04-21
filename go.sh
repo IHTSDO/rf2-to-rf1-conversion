@@ -3,12 +3,15 @@ set -e;
 
 memParams="-Xms512m -Xmx4g"
 
-while getopts ":hdivu:" opt
+while getopts ":hHdivu:" opt
 do
 	case $opt in
 		h)
  			historyFlag="-h"
 		;;
+                H)
+                        historyFlag="-H"
+                ;;
 		d)
   			debugParams="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=8080"
 		;;
@@ -36,5 +39,5 @@ done
 ramDrive="-u /Volumes/ram_disk"
 runTimeFlags="${verboseFlag} ${historyFlag} ${interactiveFlag} ${ramDrive}"
  
-#java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/Backup/SnomedCT_RF2Release_INT_20160131.zip
-java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/Backup/SnomedCT_RF2Release_INT_20160131.zip ~/Backup/SnomedCT_SpanishRelease-es_INT_20160430.zip
+java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/Backup/SnomedCT_RF2Release_INT_20160131.zip
+#java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/Backup/SnomedCT_RF2Release_INT_20160131.zip ~/Backup/SnomedCT_SpanishRelease-es_INT_20160430.zip
