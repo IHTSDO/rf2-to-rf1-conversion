@@ -12,6 +12,8 @@ SET @HISTORY_START = 20130731;
 SET @CONCEPT_NON_CURRENT = 8;
 SET @NOT_SET = -1;
 
+SET @COMPONENT_OF_INTEREST = 1463500014;
+
 -- PARALLEL_START;
 -- Insert all concept changes into history and we'll work out what changes where made
 -- in a subsequent pass.
@@ -27,10 +29,13 @@ FROM rf2_concept_sv c
 WHERE c.effectiveTime >= @HISTORY_START;
 
 -- Where the concept entry in the history has no previous entry in the history, 
--- then we'll mark the status as 0 - Created.
+-- then we'll mark the status as 0 - Created.   
+-- Watch out for components that are created in an inactive state however.
 UPDATE rf21_COMPONENTHISTORY ch 
 SET CHANGETYPE=0,
-STATUS = 0
+STATUS = ( select statusFor(c.active) from rf2_concept_sv c
+			where c.id = ch.componentid
+			and c.effectiveTime = ch.releaseversion )
 WHERE isConcept = true
 AND NOT EXISTS (
 	SELECT 1 from rf2_concept_sv cf
@@ -51,9 +56,12 @@ WHERE t.effectiveTime >= @HISTORY_START;
 
 -- Where the term entry in the history has no previous entry in the history, 
 -- then we'll mark the status as 0 - Created.
+-- Watch out for components that are created in an inactive state however.
 UPDATE rf21_COMPONENTHISTORY ch 
 SET CHANGETYPE=0,
-STATUS = 0
+STATUS = ( select statusFor(t.active) from rf2_term_sv t
+			where t.id = ch.componentid
+			and t.effectiveTime = ch.releaseversion )
 WHERE isConcept = false
 AND NOT EXISTS (
 	SELECT 1 from rf2_term_sv tf
@@ -67,7 +75,7 @@ CREATE INDEX idx_comphist_status ON rf21_COMPONENTHISTORY(status);
 CREATE INDEX idx_comphist_prev ON rf21_COMPONENTHISTORY(previousVersion);
 CREATE INDEX idx_comphist_c ON rf21_COMPONENTHISTORY(isConcept);
 
-SELECT * from rf21_COMPONENTHISTORY where componentid = 100343017;
+SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
 
 -- Where there is no other change, but the inactivation indicator
 -- is modified, add a new row.
@@ -82,7 +90,15 @@ FROM rf2_crefset_sv s
 WHERE s.refsetId in (@CONCEPT_INACT_RS,@DESC_INACT_RS)
 AND s.effectiveTime >= @HISTORY_START;
 
-SELECT * from rf21_COMPONENTHISTORY where componentid = 100343017;
+SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
+
+-- Now if we have rows that do not have a status set that are duplicates with rows that do
+-- then now would be good time to delete those before we can't tell between them.
+DELETE from rf21_COMPONENTHISTORY ch WHERE EXISTS
+( SELECT 1 from rf21_COMPONENTHISTORY ch2
+  WHERE ch.componentid = ch2.componentid
+  AND ch.releaseVersion = ch2.releaseVersion
+  AND ch.status = @NOT_SET and NOT ch2.status = @NOT_SET);
 
 -- Where there's been a change in the language acceptability, capture
 -- that too.
@@ -134,7 +150,7 @@ AND NOT EXISTS (
 	and NOT t2.casesignificanceid = t.caseSignificanceId
 );
 
-SELECT * from rf21_COMPONENTHISTORY where componentid = 832350016;
+SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
 
 
 -- Where there was a status change and the previous version had a different
@@ -170,7 +186,7 @@ SET CHANGETYPE=1,
 STATUS = statusFor ( select active from rf2_concept_sv c
 						where ch.componentid = c.id
 						and ch.releaseversion = c.effectiveTime ),
-Reason =  @S_CHANGE
+Reason =  @CS_CHANGE
 WHERE EXISTS (
 	SELECT 1 FROM rf2_concept_sv c2, rf2_concept_sv c3
 	WHERE ch.componentid = c2.id
@@ -215,5 +231,6 @@ WHERE EXISTS (
   AND ( 
      ch.changeType > ch2.changeType
      OR (ch.changeType = ch2.changeType AND ch.status = 1 AND NOT ch2.status = 1)
+     OR (ch.changeType = ch2.changeType AND ch.status = 0 AND NOT ch2.status = 0)
      )
 );
