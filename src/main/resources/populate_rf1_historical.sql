@@ -1,3 +1,4 @@
+SET @MODEL_MODULE = '900000000000012004';
 SET @FSN = '900000000000003001';
 SET @CONCEPT_INACT_RS = 900000000000489007;
 SET @USRefSet = '900000000000509007';
@@ -12,11 +13,12 @@ SET @HISTORY_START = 20130731;
 SET @CONCEPT_NON_CURRENT = 8;
 SET @NOT_SET = -1;
 
-SET @COMPONENT_OF_INTEREST = 1463500014;
+SET @COMPONENT_OF_INTEREST = 3296255012;
 
 -- PARALLEL_START;
 -- Insert all concept changes into history and we'll work out what changes where made
 -- in a subsequent pass.
+-- Filter out some model component module concepts - need to do this using text as attributes are OK
 INSERT INTO rf21_COMPONENTHISTORY
 SELECT c.id, c.effectiveTime,  @NOT_SET,  @NOT_SET, '', TRUE, 
 (	-- Work out the most recent change preceeding this change
@@ -26,7 +28,12 @@ SELECT c.id, c.effectiveTime,  @NOT_SET,  @NOT_SET, '', TRUE,
 	AND c.effectiveTime >= @HISTORY_START
 )
 FROM rf2_concept_sv c
-WHERE c.effectiveTime >= @HISTORY_START;
+WHERE NOT ( c.moduleId = @MODEL_MODULE
+		AND EXISTS ( SELECT 1 from rf2_term_sv t
+						WHERE t.typeid = @FSN
+						AND t.conceptid = c.id
+						AND t.term like '%metadata concept)' ))
+AND c.effectiveTime >= @HISTORY_START;
 
 -- Where the concept entry in the history has no previous entry in the history, 
 -- then we'll mark the status as 0 - Created.   
@@ -52,7 +59,12 @@ SELECT t.id, t.effectiveTime,  @NOT_SET,  @NOT_SET, '', FALSE,
 	AND t.effectiveTime >= @HISTORY_START
 )
 FROM rf2_term_sv t
-WHERE t.effectiveTime >= @HISTORY_START;
+WHERE NOT( t.moduleId = @MODEL_MODULE
+		AND EXISTS ( SELECT 1 from rf2_term_sv t2
+						WHERE t2.typeid = @FSN
+						AND t2.conceptid = t.conceptid
+						AND t2.term like '%metadata concept)' ))
+AND t.effectiveTime >= @HISTORY_START;
 
 -- Where the term entry in the history has no previous entry in the history, 
 -- then we'll mark the status as 0 - Created.
@@ -111,6 +123,13 @@ null
 FROM rf2_crefset_sv s
 WHERE s.refsetId = @USRefSet
 AND s.effectiveTime >= @HISTORY_START
+-- We'll also pick up Text Definitions from the Lang Refset, so check it exists 
+-- in the descriptions table
+AND EXISTS (
+	SELECT 1 FROM rf2_term_sv t
+	WHERE t.id = s.referencedComponentId
+)
+-- And make sure there isn't already a change noted for this component / effective time
 AND NOT EXISTS (
   SELECT 1 from rf21_COMPONENTHISTORY ch
   where s.referencedComponentId = ch.componentid
@@ -153,18 +172,23 @@ AND NOT EXISTS (
 SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
 
 
--- Where there was a status change and the previous version had a different
+-- Where there was a component change and the previous version had a different
 -- case sensitivity, set an INITIALCAPITALSTATUS CHANGE.  For descriptions only.
--- but not where the was also a change in active status
+-- but not where the was also a change in active status, which takes priority
 UPDATE rf21_COMPONENTHISTORY ch
 SET changeType = 2,
+-- Status will be taken from the most recent active inactivation indicator
 STATUS = COALESCE (
-	(select max(magicNumberFor(s.linkedComponentId))
+	select max(CASE WHEN s.active = 1 THEN magicNumberFor(s.linkedComponentId) else 0 END) 
 	from rf2_crefset_sv s
 	where s.referencedComponentId = ch.componentId
 	and s.refSetId = @DESC_INACT_RS
-	AND s.effectiveTime <= ch.releaseVersion
-	AND s.active = 1),0) ,
+	-- The current inactivation indicator might be inactive
+	AND s.effectiveTime = ( SELECT MAX(s2.effectivetime) from rf2_crefset_sv s2
+							WHERE s.refsetId = s2.refsetId
+							AND s.referencedComponentId = s2.referencedComponentId
+							AND s2.effectivetime <= ch.releaseVersion)
+	,0) ,
 reason = @ICS_CHANGE
 WHERE ch.isConcept = FALSE
 AND ch.changeType =  @NOT_SET
@@ -177,6 +201,9 @@ AND EXISTS (
 	AND t1.active = t2.active
 	AND NOT t1.casesignificanceid = t2.casesignificanceid
 );
+
+SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
+
 
 -- Where there's been a status change but we haven't found an inactivation reason, 
 -- just set the status to 1 - reason unknown
@@ -217,6 +244,8 @@ WHERE EXISTS (
 AND ch.isConcept = FALSE
 AND ch.status = @NOT_SET
 AND releaseversion >=  @HISTORY_START;
+
+SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
 
 -- Now delete anything we haven't found a reason for.  Eg changes to definitionStatusId
 DELETE from rf21_COMPONENTHISTORY
