@@ -33,7 +33,7 @@ public class ConversionManager {
 	private String LNG = "LNG";
 	private String DATE = "DATE";
 	private String OUT = "OUT";
-	private String ANCIENT_HISTORY = "/sct1_ComponentHistory_Core_INT_20130131.txt";
+	private String ANCIENT_HISTORY = "/sct1_ComponentHistory_Core_INT_20130731.txt";
 	Set<File> filesLoaded = new HashSet<File>();
 	
 	enum Edition { INTERNATIONAL, SPANISH };

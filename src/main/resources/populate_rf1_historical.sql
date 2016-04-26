@@ -9,12 +9,12 @@ SET @DS_CHANGE = 'DESCRIPTIONSTATUS CHANGE';
 SET @DT_CHANGE = 'DESCRIPTIONTYPE CHANGE';
 SET @ICS_CHANGE = 'INITIALCAPITALSTATUS CHANGE';
 SET @FSN_CHANGE = 'FULLYSPECIFIEDNAME CHANGE';
-SET @HISTORY_START = 20130731;
+SET @HISTORY_START = 20140131;
 SET @CONCEPT_NON_CURRENT = 8;
 SET @ADDED = 0;
 SET @NOT_SET = -1;
 
-SET @COMPONENT_OF_INTEREST = 92515019;
+SET @COMPONENT_OF_INTEREST = 3085207015;
 
 -- PARALLEL_START;
 -- Insert all concept changes into history and we'll work out what changes where made
@@ -90,7 +90,9 @@ CREATE INDEX idx_comphist_c ON rf21_COMPONENTHISTORY(isConcept);
 
 -- Where the term has been created and the concept is inactive on that date
 -- set the status to 8 - "Concept Inactive"
-UPDATE rf21_COMPONENTHISTORY ch
+-- Comment this out.  It didn't happen after 20130731.  We now only rely on 
+-- inactivation indicators
+/*UPDATE rf21_COMPONENTHISTORY ch
 SET STATUS =  @CONCEPT_NON_CURRENT
 WHERE isConcept = false
 AND changeType = @ADDED
@@ -102,7 +104,7 @@ AND EXISTS (
 	AND cf.effectiveTime = ( SELECT max(effectiveTime) FROM rf2_concept_sv cf2
 								WHERE cf2.id = cf.id
 								AND cf.effectiveTime <= ch.releaseVersion)
-);
+)*/;
 
 
 
