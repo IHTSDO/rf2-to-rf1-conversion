@@ -11,9 +11,10 @@ SET @ICS_CHANGE = 'INITIALCAPITALSTATUS CHANGE';
 SET @FSN_CHANGE = 'FULLYSPECIFIEDNAME CHANGE';
 SET @HISTORY_START = 20130731;
 SET @CONCEPT_NON_CURRENT = 8;
+SET @ADDED = 0;
 SET @NOT_SET = -1;
 
-SET @COMPONENT_OF_INTEREST = 3296255012;
+SET @COMPONENT_OF_INTEREST = 92515019;
 
 -- PARALLEL_START;
 -- Insert all concept changes into history and we'll work out what changes where made
@@ -39,7 +40,7 @@ AND c.effectiveTime >= @HISTORY_START;
 -- then we'll mark the status as 0 - Created.   
 -- Watch out for components that are created in an inactive state however.
 UPDATE rf21_COMPONENTHISTORY ch 
-SET CHANGETYPE=0,
+SET CHANGETYPE = @ADDED,
 STATUS = ( select statusFor(c.active) from rf2_concept_sv c
 			where c.id = ch.componentid
 			and c.effectiveTime = ch.releaseversion )
@@ -70,7 +71,7 @@ AND t.effectiveTime >= @HISTORY_START;
 -- then we'll mark the status as 0 - Created.
 -- Watch out for components that are created in an inactive state however.
 UPDATE rf21_COMPONENTHISTORY ch 
-SET CHANGETYPE=0,
+SET CHANGETYPE = @ADDED,
 STATUS = ( select statusFor(t.active) from rf2_term_sv t
 			where t.id = ch.componentid
 			and t.effectiveTime = ch.releaseversion )
@@ -87,20 +88,92 @@ CREATE INDEX idx_comphist_status ON rf21_COMPONENTHISTORY(status);
 CREATE INDEX idx_comphist_prev ON rf21_COMPONENTHISTORY(previousVersion);
 CREATE INDEX idx_comphist_c ON rf21_COMPONENTHISTORY(isConcept);
 
+-- Where the term has been created and the concept is inactive on that date
+-- set the status to 8 - "Concept Inactive"
+UPDATE rf21_COMPONENTHISTORY ch
+SET STATUS =  @CONCEPT_NON_CURRENT
+WHERE isConcept = false
+AND changeType = @ADDED
+AND EXISTS (
+	SELECT 1 FROM rf2_concept_sv cf, rf2_term_sv tf
+	WHERE cf.id = tf.conceptid
+	AND tf.id = ch.componentid
+	AND cf.active = 0
+	AND cf.effectiveTime = ( SELECT max(effectiveTime) FROM rf2_concept_sv cf2
+								WHERE cf2.id = cf.id
+								AND cf.effectiveTime <= ch.releaseVersion)
+);
+
+
+
 SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
 
+-- CONCEPT INACTIVATION
 -- Where there is no other change, but the inactivation indicator
 -- is modified, add a new row.
--- Where the row is inactivating, the change type becomes unknown ie 1
+-- Where the row is inactivating, the change type becomes unknown ie 1 or perhaps the component is 
+-- now active in which case 0.
+-- But not when there exists a previous entry has the same status - is not a change in that case.
 INSERT INTO rf21_COMPONENTHISTORY
 SELECT s.referencedComponentId, s.effectiveTime, 1, 
-CASE WHEN s.active = 1 THEN magicNumberFor(s.linkedComponentId) else 1 END AS status, 
-CASE WHEN s.refsetId = @DESC_INACT_RS THEN @DS_CHANGE else @CS_CHANGE END AS reason, 
-CASE WHEN s.refsetId = @DESC_INACT_RS THEN false else true END AS isConcept,
+CASE WHEN s.active = 1 THEN magicNumberFor(s.linkedComponentId) ELSE
+	-- Find the most recent active flag for the description
+	select statusFor(c.active) from rf2_concept_sv c
+	where c.id = s.referencedComponentId
+	and c.effectiveTime = ( select max(c2.effectiveTime) 
+							from rf2_concept_sv c2
+							where c2.id = c.id
+							and c2.effectiveTime <= s.effectiveTime)
+ END AS status,  
+@CS_CHANGE AS reason, 
+true AS isConcept,
 null
 FROM rf2_crefset_sv s
-WHERE s.refsetId in (@CONCEPT_INACT_RS,@DESC_INACT_RS)
-AND s.effectiveTime >= @HISTORY_START;
+WHERE s.refsetId = @CONCEPT_INACT_RS
+AND s.effectiveTime >= @HISTORY_START
+AND NOT EXISTS (
+	SELECT 1 from rf21_COMPONENTHISTORY ch
+	where s.referencedComponentId = ch.componentId
+	-- Find the next previous or current entry
+	and ch.releaseVersion = ( SELECT MAX(ch2.releaseVersion) 
+								FROM rf21_COMPONENTHISTORY ch2 
+								WHERE ch.componentId = ch2.componentId
+								AND ch2.releaseVersion <= s.effectiveTime )
+	and ch.status = magicNumberFor(s.linkedComponentId)
+);
+
+-- DESCRIPTION INACTIVATION
+-- Where there is no other change, but the inactivation indicator
+-- is modified, add a new row.
+-- Where the row is inactivating, the change type becomes unknown ie 1 or perhaps the component is 
+-- now active in which case 0.
+-- But not when there exists a previous entry has the same status - is not a change in that case.
+INSERT INTO rf21_COMPONENTHISTORY
+SELECT s.referencedComponentId, s.effectiveTime, 1, 
+CASE WHEN s.active = 1 THEN magicNumberFor(s.linkedComponentId) else 
+ (  -- Find the most recent active flag for the description
+ 	select statusFor(d.active) from rf2_term_sv d
+ 	where d.id = s.referencedComponentId
+ 	and d.effectiveTime = ( select max(d2.effectiveTime) from rf2_term_sv d2
+ 							where d2.id = d.id
+ 							and d2.effectiveTime <= s.effectiveTime)
+ ) END AS status, 
+@DS_CHANGE AS reason, 
+ false isConcept,
+null
+FROM rf2_crefset_sv s
+WHERE s.refsetId = @DESC_INACT_RS
+AND s.effectiveTime >= @HISTORY_START
+AND NOT EXISTS (
+	SELECT 1 from rf21_COMPONENTHISTORY ch
+	where s.referencedComponentId = ch.componentId
+	-- Find the next previous or current entry
+	and ch.releaseVersion = ( SELECT MAX(ch2.releaseVersion) 
+								FROM rf21_COMPONENTHISTORY ch2 
+								WHERE ch.componentId = ch2.componentId
+								AND ch2.releaseVersion <= s.effectiveTime )
+	and ch.status = magicNumberFor(s.linkedComponentId)
+);
 
 SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
 
