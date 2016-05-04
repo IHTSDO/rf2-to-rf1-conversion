@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e;
 
-memParams="-Xms512m -Xmx4g"
+memParams="-Xms3g -Xmx8g"
 
 while getopts ":hHdivu:" opt
 do

@@ -2,21 +2,37 @@ package org.ihtsdo.snomed.rf2torf1conversion;
 
 import static org.ihtsdo.snomed.rf2torf1conversion.GlobalUtils.*;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
+import java.lang.reflect.Type;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
+import org.ihtsdo.snomed.rf2torf1conversion.pojo.Concept;
+import org.ihtsdo.snomed.rf2torf1conversion.pojo.ConceptDeserializer;
+import org.ihtsdo.snomed.rf2torf1conversion.pojo.QualifyingRelationshipAttribute;
+import org.ihtsdo.snomed.rf2torf1conversion.pojo.QualifyingRelationshipRule;
+import org.ihtsdo.snomed.rf2torf1conversion.pojo.RF2SchemaConstants;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.io.Files;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 
-public class ConversionManager {
+public class ConversionManager implements RF2SchemaConstants{
 
 	File intRf2Archive;
 	File extRf2Archive;
@@ -34,6 +50,8 @@ public class ConversionManager {
 	private String DATE = "DATE";
 	private String OUT = "OUT";
 	private String ANCIENT_HISTORY = "/sct1_ComponentHistory_Core_INT_20130731.txt";
+	private String QUALIFYING_RULES = "/qualifying_relationship_rules.json";
+	private String RELATIONSHIP_FILENAME = "SnomedCT_OUT_INT_DATE/Terminology/Content/sct1_Relationships_Core_INT_DATE.txt";
 	Set<File> filesLoaded = new HashSet<File>();
 	
 	enum Edition { INTERNATIONAL, SPANISH };
@@ -123,7 +141,7 @@ public class ConversionManager {
 		intExportMap.put("SnomedCT_OUT_INT_DATE/Terminology/Content/sct1_Concepts_Core_INT_DATE.txt",
 				"select CONCEPTID, CONCEPTSTATUS, FULLYSPECIFIEDNAME, CTV3ID, SNOMEDID, ISPRIMITIVE from rf21_concept");
 		intExportMap
-				.put("SnomedCT_OUT_INT_DATE/Terminology/Content/sct1_Relationships_Core_INT_DATE.txt",
+				.put(RELATIONSHIP_FILENAME,
 						"select RELATIONSHIPID,CONCEPTID1,RELATIONSHIPTYPE,CONCEPTID2,CHARACTERISTICTYPE,REFINABILITY,RELATIONSHIPGROUP from rf21_rel");
 		}	
 
@@ -141,6 +159,8 @@ public class ConversionManager {
 	}
 
 	public static void main(String[] args) throws RF1ConversionException {
+		//Set Windows Line separator as that's an RF1 standard
+		System.setProperty("line.separator", "\r\n");
 		ConversionManager cm = new ConversionManager();
 		cm.doRf2toRf1Conversion(args);
 	}
@@ -169,7 +189,7 @@ public class ConversionManager {
 				isExtension = true;
 			} 
 			
-			long maxOperations = getMaxOperations();
+/*			long maxOperations = getMaxOperations();
 			if (isExtension) {
 				maxOperations = includeHistory? maxOperations : 388;
 			} else {
@@ -206,7 +226,14 @@ public class ConversionManager {
 			exportArea = Files.createTempDir();
 			exportRF1Data(intExportMap, releaseDate, intReleaseDate, knownEditionMap.get(edition), exportArea);
 			exportRF1Data(extExportMap, releaseDate, releaseDate, knownEditionMap.get(edition), exportArea);
-
+*/
+			exportArea = Files.createTempDir();
+			print("\nLoading Inferred Relationship Hierarchy for Qualifying Relationship computation...");
+			loadRelationshipHierarchy(intLoadingArea);
+			Set<QualifyingRelationshipAttribute> ruleAttributes = loadQualifyingRelationshipRules();
+			
+			print ("\nGenerating qualifying relationships");
+			generateQualifyingRelationships(ruleAttributes, /*releaseDate*/ "20160131", knownEditionMap.get(edition), exportArea);
 			
 			print("\nZipping archive");
 			createArchive(exportArea);
@@ -341,7 +368,9 @@ public class ConversionManager {
 			throw new RF1ConversionException("Unable to create temporary directory for archive extration");
 		}
 		// We only need to work with the full files
-		unzipFlat(archive, tempDir, "Full");
+		//...mostly, we also need the Snapshot Relationship file in order to work out the Qualifying Relationships
+		unzipFlat(archive, tempDir, new String[]{"Full","sct2_Relationship_Snapshot"});
+		
 		return tempDir;
 	}
 
@@ -470,6 +499,77 @@ public class ConversionManager {
 			db.export(filePath, entry.getValue(), isInclude);
 		}
 		db.finishParallelProcessing();
+	}
+	
+
+	private void loadRelationshipHierarchy(File intLoadingArea) throws RF1ConversionException {
+		String fileName = intLoadingArea.getAbsolutePath() + File.separator + "sct2_Relationship_Snapshot_INT_DATE.txt";
+		fileName = fileName.replace(DATE, intReleaseDate);
+		GraphLoader gl = new GraphLoader (fileName);
+		gl.loadRelationships();
+	}
+	
+
+	private Set<QualifyingRelationshipAttribute> loadQualifyingRelationshipRules() {
+		GsonBuilder gsonBuilder = new GsonBuilder();
+		gsonBuilder.registerTypeAdapter(Concept.class, new ConceptDeserializer());
+		Gson gson = gsonBuilder.create();
+		InputStream jsonStream = ConversionManager.class.getResourceAsStream(QUALIFYING_RULES);
+		BufferedReader jsonReader = new BufferedReader(new InputStreamReader(jsonStream));
+		Type listType = new TypeToken<Set<QualifyingRelationshipAttribute>>() {}.getType();
+		Set<QualifyingRelationshipAttribute> attributes = gson.fromJson(jsonReader, listType);
+		return attributes;
+	}
+	
+
+	private void generateQualifyingRelationships(
+			Set<QualifyingRelationshipAttribute> ruleAttributes, String releaseDate, EditionConfig editionConfig, File exportArea) throws RF1ConversionException {
+		//For each attribute, work through each rule creating rules for self and all children of starting points,
+		//except for exceptions
+		// Replace DATE in the filename with the actual release date
+		String fileName = RELATIONSHIP_FILENAME.replaceFirst(DATE, releaseDate)
+				.replace(DATE, releaseDate)
+				.replace(OUT, editionConfig.outputName)
+				.replace(LNG, editionConfig.langCode);
+		String filePath = exportArea + File.separator + fileName;
+		File outputFile = new File(filePath);
+		try{
+			if (!outputFile.exists()) {
+				outputFile.getParentFile().mkdirs();
+				outputFile.createNewFile();
+			}
+		} catch (IOException e) {
+			throw new RF1ConversionException("Unable to create file for Qualifying Relationships: " + e);
+		}
+		
+		try(FileWriter fw = new FileWriter(filePath, true);
+				BufferedWriter bw = new BufferedWriter(fw);
+				PrintWriter out = new PrintWriter(bw))
+			{
+				for (QualifyingRelationshipAttribute thisAttribute : ruleAttributes) {
+					StringBuffer commonRF1 = new StringBuffer().append(FIELD_DELIMITER)
+											.append(thisAttribute.getType().getSctId()).append(FIELD_DELIMITER)
+											.append(thisAttribute.getDestination().getSctId()).append(FIELD_DELIMITER)
+											.append("1\t")//Qualifying Reltype
+											.append(thisAttribute.getRefinability()).append("\t0"); //Optionally Refineable, Group 0
+					for (QualifyingRelationshipRule thisRule : thisAttribute.getRules()) {
+						Set<Concept> potentialApplications = thisRule.getStartPoint().getAllDescendents(Concept.DEPTH_NOT_SET);
+						Collection<Concept> ruleAppliedTo = CollectionUtils.subtract(potentialApplications, thisRule.getExceptions());
+						for (Concept thisException : thisRule.getExceptions()) {
+							Set<Concept> exceptionDescendents = thisException.getAllDescendents(Concept.DEPTH_NOT_SET);
+							ruleAppliedTo = CollectionUtils.subtract(ruleAppliedTo, exceptionDescendents);
+						}
+						//Now the remaining concepts that the rules applies to can be written out to file
+						for (Concept thisConcept : ruleAppliedTo) {
+							String rf1Line = FIELD_DELIMITER + thisConcept.getSctId() + commonRF1;
+							out.println(rf1Line);
+						}
+					}
+				}
+			} catch (IOException e) {
+				throw new RF1ConversionException ("Failure while output Qualifying Relationships: " + e.toString());
+			}
+		
 	}
 
 }

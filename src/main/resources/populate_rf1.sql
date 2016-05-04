@@ -14,7 +14,7 @@ WHERE NOT EXISTS (
 	-- Don't include any metadata concepts
 	SELECT 1 FROM rf2_term t
 	WHERE c.id = t.conceptid
-	AND t.typeid = 900000000000003001 --fsn
+	AND t.typeid = @FSN
 	AND ( t.term like '%metadata concept)' OR t.term like '%metadato fundacional)'
 	OR t.term like '%metadato del núcleo)' )
 );

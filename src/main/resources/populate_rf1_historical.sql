@@ -2,11 +2,13 @@ SET @MODEL_MODULE = '900000000000012004';
 SET @FSN = '900000000000003001';
 SET @CONCEPT_INACT_RS = 900000000000489007;
 SET @USRefSet = '900000000000509007';
+SET @GBRefSet = '900000000000508004';
 SET @CS_CHANGE = 'CONCEPTSTATUS CHANGE';
 
 SET @DESC_INACT_RS = 900000000000490003;
 SET @DS_CHANGE = 'DESCRIPTIONSTATUS CHANGE';
 SET @DT_CHANGE = 'DESCRIPTIONTYPE CHANGE';
+SET @LC_CHANGE = 'LANGUAGECODE CHANGE';
 SET @ICS_CHANGE = 'INITIALCAPITALSTATUS CHANGE';
 SET @FSN_CHANGE = 'FULLYSPECIFIEDNAME CHANGE';
 SET @HISTORY_START = 20140131;
@@ -14,7 +16,7 @@ SET @CONCEPT_NON_CURRENT = 8;
 SET @ADDED = 0;
 SET @NOT_SET = -1;
 
-SET @COMPONENT_OF_INTEREST = 3085207015;
+SET @COMPONENT_OF_INTEREST = 2532249011;
 
 -- PARALLEL_START;
 -- Insert all concept changes into history and we'll work out what changes where made
@@ -88,12 +90,14 @@ CREATE INDEX idx_comphist_status ON rf21_COMPONENTHISTORY(status);
 CREATE INDEX idx_comphist_prev ON rf21_COMPONENTHISTORY(previousVersion);
 CREATE INDEX idx_comphist_c ON rf21_COMPONENTHISTORY(isConcept);
 
--- Where the term has been created and the concept is inactive on that date
--- set the status to 8 - "Concept Inactive"
--- Comment this out.  It didn't happen after 20130731.  We now only rely on 
--- inactivation indicators
-/*UPDATE rf21_COMPONENTHISTORY ch
-SET STATUS =  @CONCEPT_NON_CURRENT
+-- Where the term has been created and there is immediately an inactivation indicator
+UPDATE rf21_COMPONENTHISTORY ch
+SET STATUS = COALESCE ( SELECT magicNumberFor(s.linkedComponentId)
+	from rf2_crefset_sv s
+	where s.referencedComponentId = ch.componentId
+	and s.refSetId = @DESC_INACT_RS
+	AND s.effectiveTime = ch.releaseVersion
+	AND s.active = 1,0)
 WHERE isConcept = false
 AND changeType = @ADDED
 AND EXISTS (
@@ -104,7 +108,7 @@ AND EXISTS (
 	AND cf.effectiveTime = ( SELECT max(effectiveTime) FROM rf2_concept_sv cf2
 								WHERE cf2.id = cf.id
 								AND cf.effectiveTime <= ch.releaseVersion)
-)*/;
+);
 
 
 
@@ -189,14 +193,16 @@ DELETE from rf21_COMPONENTHISTORY ch WHERE EXISTS
 
 -- Where there's been a change in the language acceptability, capture
 -- that too.
+-- A change from PREF to ACCEPT results in DS_CHANGE
+-- Just becoming acceptable for the first time is a LC_CHANGE
 INSERT INTO rf21_COMPONENTHISTORY
-SELECT s.referencedComponentId, s.effectiveTime, 2, 
+SELECT DISTINCT s.referencedComponentId, s.effectiveTime, 2, 
 CASE WHEN s.active = 1 THEN 0 else 1 END AS status, 
-@DT_CHANGE AS reason, 
+@LC_CHANGE AS reason, 
 false AS isConcept,
 null
 FROM rf2_crefset_sv s
-WHERE s.refsetId = @USRefSet
+WHERE s.refsetId IN (@USRefSet, @GBRefSet)
 AND s.effectiveTime >= @HISTORY_START
 -- We'll also pick up Text Definitions from the Lang Refset, so check it exists 
 -- in the descriptions table

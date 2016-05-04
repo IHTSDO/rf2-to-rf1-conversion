@@ -40,7 +40,7 @@ public class GlobalUtils {
 		}
 	}
 
-	public static void unzipFlat(File archive, File targetDir, String matchStr) throws RF1ConversionException {
+	public static void unzipFlat(File archive, File targetDir, String[] matchArray) throws RF1ConversionException {
 
 		if (!targetDir.exists() || !targetDir.isDirectory()) {
 			throw new RF1ConversionException(targetDir + " is not a viable directory in which to extract archive");
@@ -53,13 +53,15 @@ public class GlobalUtils {
 					if (!ze.isDirectory()) {
 						Path p = Paths.get(ze.getName());
 						String extractedFileName = p.getFileName().toString();
-						if (matchStr == null || extractedFileName.contains(matchStr)) {
-							debug("Extracting " + extractedFileName);
-							File extractedFile = new File(targetDir, extractedFileName);
-							OutputStream out = new FileOutputStream(extractedFile);
-							IOUtils.copy(zis, out);
-							IOUtils.closeQuietly(out);
-							updateProgress();
+						for (String matchStr : matchArray) {
+							if (matchStr == null || extractedFileName.contains(matchStr)) {
+								debug("Extracting " + extractedFileName);
+								File extractedFile = new File(targetDir, extractedFileName);
+								OutputStream out = new FileOutputStream(extractedFile);
+								IOUtils.copy(zis, out);
+								IOUtils.closeQuietly(out);
+								updateProgress();
+							}
 						}
 					}
 					ze = zis.getNextEntry();
