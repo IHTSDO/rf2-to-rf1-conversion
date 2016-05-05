@@ -13,6 +13,7 @@ public class Concept implements Comparable<Concept> {
 	private Long sctId;
 	Set<Concept> parents = new TreeSet<Concept>();
 	Set<Concept> children = new TreeSet<Concept>();
+	Set<Relationship> attributes = new TreeSet<Relationship>();
 
 	public static final int DEPTH_NOT_SET = -1;
 	public static final int IMMEDIATE_CHILDREN_ONLY = 1;
@@ -49,8 +50,20 @@ public class Concept implements Comparable<Concept> {
 			// And tell that parent that it has a child
 			r.getDestinationConcept().children.add(this);
 		} else {
-			// For RF1 conversion we're only interested in ISA hierarchy
+			attributes.add(r);
 		}
+	}
+	
+	public boolean hasAttribute (QualifyingRelationshipAttribute td) {
+		boolean attributeFound = false;
+		for (Relationship r : attributes) {
+			if (r.getTypeConcept().equals(td.getType()) 
+				&& r.getDestinationConcept().equals(td.getDestination())) {
+				attributeFound = true;
+				break;
+			}
+		}
+		return attributeFound;
 	}
 
 	@Override

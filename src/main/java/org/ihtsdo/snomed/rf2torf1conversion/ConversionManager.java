@@ -233,7 +233,8 @@ public class ConversionManager implements RF2SchemaConstants{
 			Set<QualifyingRelationshipAttribute> ruleAttributes = loadQualifyingRelationshipRules();
 			
 			print ("\nGenerating qualifying relationships");
-			generateQualifyingRelationships(ruleAttributes, /*releaseDate*/ "20160131", knownEditionMap.get(edition), exportArea);
+			String filePath = getQualifyingRelationshipFilepath(/*releaseDate*/ "20160131", knownEditionMap.get(edition), exportArea);
+			generateQualifyingRelationships(ruleAttributes, filePath);
 			
 			print("\nZipping archive");
 			createArchive(exportArea);
@@ -523,9 +524,45 @@ public class ConversionManager implements RF2SchemaConstants{
 	
 
 	private void generateQualifyingRelationships(
-			Set<QualifyingRelationshipAttribute> ruleAttributes, String releaseDate, EditionConfig editionConfig, File exportArea) throws RF1ConversionException {
+			Set<QualifyingRelationshipAttribute> ruleAttributes, String filePath) throws RF1ConversionException {
 		//For each attribute, work through each rule creating rules for self and all children of starting points,
 		//except for exceptions
+		
+		try(FileWriter fw = new FileWriter(filePath, true);
+				BufferedWriter bw = new BufferedWriter(fw);
+				PrintWriter out = new PrintWriter(bw))
+			{
+				for (QualifyingRelationshipAttribute thisAttribute : ruleAttributes) {
+					StringBuffer commonRF1 = new StringBuffer().append(FIELD_DELIMITER)
+											.append(thisAttribute.getType().getSctId()).append(FIELD_DELIMITER)
+											.append(thisAttribute.getDestination().getSctId()).append(FIELD_DELIMITER)
+											.append("1\t")//Qualifying Reltype
+											.append(thisAttribute.getRefinability()).append("\t0"); //Refineable, Group 0
+					for (QualifyingRelationshipRule thisRule : thisAttribute.getRules()) {
+						Set<Concept> potentialApplications = thisRule.getStartPoint().getAllDescendents(Concept.DEPTH_NOT_SET);
+						Collection<Concept> ruleAppliedTo = CollectionUtils.subtract(potentialApplications, thisRule.getExceptions());
+						for (Concept thisException : thisRule.getExceptions()) {
+							Set<Concept> exceptionDescendents = thisException.getAllDescendents(Concept.DEPTH_NOT_SET);
+							ruleAppliedTo = CollectionUtils.subtract(ruleAppliedTo, exceptionDescendents);
+						}
+						//Now the remaining concepts that the rules applies to can be written out to file
+						for (Concept thisConcept : ruleAppliedTo) {
+							//Concept may already have this attribute as a defining relationship, skip if so.
+							if (!thisConcept.hasAttribute(thisAttribute)) {
+								String rf1Line = FIELD_DELIMITER + thisConcept.getSctId() + commonRF1;
+								out.println(rf1Line);
+							}
+						}
+					}
+				}
+			} catch (IOException e) {
+				throw new RF1ConversionException ("Failure while output Qualifying Relationships: " + e.toString());
+			}
+		
+	}
+
+	private String getQualifyingRelationshipFilepath(String releaseDate,
+			EditionConfig editionConfig, File exportArea) throws RF1ConversionException {
 		// Replace DATE in the filename with the actual release date
 		String fileName = RELATIONSHIP_FILENAME.replaceFirst(DATE, releaseDate)
 				.replace(DATE, releaseDate)
@@ -541,35 +578,7 @@ public class ConversionManager implements RF2SchemaConstants{
 		} catch (IOException e) {
 			throw new RF1ConversionException("Unable to create file for Qualifying Relationships: " + e);
 		}
-		
-		try(FileWriter fw = new FileWriter(filePath, true);
-				BufferedWriter bw = new BufferedWriter(fw);
-				PrintWriter out = new PrintWriter(bw))
-			{
-				for (QualifyingRelationshipAttribute thisAttribute : ruleAttributes) {
-					StringBuffer commonRF1 = new StringBuffer().append(FIELD_DELIMITER)
-											.append(thisAttribute.getType().getSctId()).append(FIELD_DELIMITER)
-											.append(thisAttribute.getDestination().getSctId()).append(FIELD_DELIMITER)
-											.append("1\t")//Qualifying Reltype
-											.append(thisAttribute.getRefinability()).append("\t0"); //Optionally Refineable, Group 0
-					for (QualifyingRelationshipRule thisRule : thisAttribute.getRules()) {
-						Set<Concept> potentialApplications = thisRule.getStartPoint().getAllDescendents(Concept.DEPTH_NOT_SET);
-						Collection<Concept> ruleAppliedTo = CollectionUtils.subtract(potentialApplications, thisRule.getExceptions());
-						for (Concept thisException : thisRule.getExceptions()) {
-							Set<Concept> exceptionDescendents = thisException.getAllDescendents(Concept.DEPTH_NOT_SET);
-							ruleAppliedTo = CollectionUtils.subtract(ruleAppliedTo, exceptionDescendents);
-						}
-						//Now the remaining concepts that the rules applies to can be written out to file
-						for (Concept thisConcept : ruleAppliedTo) {
-							String rf1Line = FIELD_DELIMITER + thisConcept.getSctId() + commonRF1;
-							out.println(rf1Line);
-						}
-					}
-				}
-			} catch (IOException e) {
-				throw new RF1ConversionException ("Failure while output Qualifying Relationships: " + e.toString());
-			}
-		
+		return filePath;
 	}
 
 }

@@ -30,10 +30,10 @@ public class Relationship implements Comparable<Relationship>, RF2SchemaConstant
 		typeId = new Long(lineValues[REL_IDX_TYPEID]);
 		group = Integer.parseInt(lineValues[REL_IDX_RELATIONSHIPGROUP]);
 		try {
-		uuid = type5UuidFactory.get(
-				lineValues[REL_IDX_SOURCEID] + lineValues[REL_IDX_DESTINATIONID] + lineValues[REL_IDX_TYPEID]
-				+ lineValues[REL_IDX_RELATIONSHIPGROUP])
-				.toString();
+			uuid = type5UuidFactory.get(
+					lineValues[REL_IDX_SOURCEID] + lineValues[REL_IDX_DESTINATIONID] + lineValues[REL_IDX_TYPEID]
+					+ lineValues[REL_IDX_RELATIONSHIPGROUP])
+					.toString();
 		} catch (UnsupportedEncodingException e) {
 			throw new RF1ConversionException ("Unable to form UUID for relationship",e);
 		}

@@ -38,7 +38,6 @@ public class GraphLoader implements RF2SchemaConstants {
 						String[] lineItems = line.split(FIELD_DELIMITER);
 						// Only store active ISA relationships
 						if (lineItems[REL_IDX_ACTIVE].equals(ACTIVE_FLAG)
-								&& lineItems[REL_IDX_TYPEID].equals(ISA)
 								&& !lineItems[REL_IDX_CHARACTERISTICTYPEID].equals(ADDITIONAL_RELATIONSHIP)) {
 							Relationship r = new Relationship(lineItems, characteristic);
 							loadedRelationships.put(r.getUuid(), r);
