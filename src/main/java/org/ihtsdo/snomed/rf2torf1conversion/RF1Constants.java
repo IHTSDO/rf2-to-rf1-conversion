@@ -11,6 +11,10 @@ public class RF1Constants {
 	public static final String INFERRED = "900000000000011006";
 	public static final String STATED = "900000000000010007";
 	public static final String ADDITIONAL = "900000000000227009";
+	
+	public static final int NOT_REFINE = 0;
+	public static final int MAY_REFINE = 1;
+	public static final int MUST_REFINE = 2;
 
 	private static Map<String, Byte> rf1Map = new HashMap<String, Byte>();
 	static {

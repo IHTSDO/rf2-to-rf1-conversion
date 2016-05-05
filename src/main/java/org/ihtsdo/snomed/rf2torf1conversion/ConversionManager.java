@@ -22,6 +22,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.ihtsdo.snomed.rf2torf1conversion.pojo.Concept;
 import org.ihtsdo.snomed.rf2torf1conversion.pojo.ConceptDeserializer;
+import org.ihtsdo.snomed.rf2torf1conversion.pojo.LateralityIndicator;
 import org.ihtsdo.snomed.rf2torf1conversion.pojo.QualifyingRelationshipAttribute;
 import org.ihtsdo.snomed.rf2torf1conversion.pojo.QualifyingRelationshipRule;
 import org.ihtsdo.snomed.rf2torf1conversion.pojo.RF2SchemaConstants;
@@ -51,6 +52,7 @@ public class ConversionManager implements RF2SchemaConstants{
 	private String OUT = "OUT";
 	private String ANCIENT_HISTORY = "/sct1_ComponentHistory_Core_INT_20130731.txt";
 	private String QUALIFYING_RULES = "/qualifying_relationship_rules.json";
+	private String LATERALITY_FILE = "/LateralityReference20160131.txt";
 	private String RELATIONSHIP_FILENAME = "SnomedCT_OUT_INT_DATE/Terminology/Content/sct1_Relationships_Core_INT_DATE.txt";
 	Set<File> filesLoaded = new HashSet<File>();
 	
@@ -235,6 +237,10 @@ public class ConversionManager implements RF2SchemaConstants{
 			print ("\nGenerating qualifying relationships");
 			String filePath = getQualifyingRelationshipFilepath(/*releaseDate*/ "20160131", knownEditionMap.get(edition), exportArea);
 			generateQualifyingRelationships(ruleAttributes, filePath);
+			
+			debug ("\nGenerating laterality qualifying relationships");
+			loadLateralityIndicators();
+			generateLateralityRelationships(filePath);
 			
 			print("\nZipping archive");
 			createArchive(exportArea);
@@ -522,6 +528,19 @@ public class ConversionManager implements RF2SchemaConstants{
 		return attributes;
 	}
 	
+	private void loadLateralityIndicators() throws RF1ConversionException {
+		
+		InputStream is = ConversionManager.class.getResourceAsStream(LATERALITY_FILE);
+		try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+			String line;
+			while ((line = br.readLine()) != null) {
+				LateralityIndicator.registerIndicator(line);
+			}
+		} catch (IOException ioe) {
+			throw new RF1ConversionException ("Unable to import laterality indicators file " + LATERALITY_FILE, ioe);
+		}
+	}
+	
 
 	private void generateQualifyingRelationships(
 			Set<QualifyingRelationshipAttribute> ruleAttributes, String filePath) throws RF1ConversionException {
@@ -536,7 +555,7 @@ public class ConversionManager implements RF2SchemaConstants{
 					StringBuffer commonRF1 = new StringBuffer().append(FIELD_DELIMITER)
 											.append(thisAttribute.getType().getSctId()).append(FIELD_DELIMITER)
 											.append(thisAttribute.getDestination().getSctId()).append(FIELD_DELIMITER)
-											.append("1\t")//Qualifying Reltype
+											.append("1\t")//Qualifying Rel type
 											.append(thisAttribute.getRefinability()).append("\t0"); //Refineable, Group 0
 					for (QualifyingRelationshipRule thisRule : thisAttribute.getRules()) {
 						Set<Concept> potentialApplications = thisRule.getStartPoint().getAllDescendents(Concept.DEPTH_NOT_SET);
@@ -556,10 +575,43 @@ public class ConversionManager implements RF2SchemaConstants{
 					}
 				}
 			} catch (IOException e) {
-				throw new RF1ConversionException ("Failure while output Qualifying Relationships: " + e.toString());
+				throw new RF1ConversionException ("Failure while outputting Qualifying Relationships: " + e.toString());
 			}
-		
 	}
+	
+	private void generateLateralityRelationships(String filePath) throws RF1ConversionException {
+		//Check every concept to see if has a laterality indicator, and doesn't already have that 
+		//attribute as a defining relationship
+		Set<Concept> allConcepts = Concept.getConcept(SNOMED_ROOT_CONCEPT).getAllDescendents(Concept.DEPTH_NOT_SET);
+		StringBuffer commonRF1 = new StringBuffer().append(FIELD_DELIMITER)
+				.append(LATERALITY_ATTRIB).append(FIELD_DELIMITER)
+				.append(SIDE_VALUE).append(FIELD_DELIMITER)
+				.append("1\t")//Qualifying Rel type
+				.append(RF1Constants.MUST_REFINE).append("\t0"); //Refineable, Group 0
+		
+		Concept lat = Concept.getConcept(Long.parseLong(LATERALITY_ATTRIB));
+		Concept side = Concept.getConcept(Long.parseLong(SIDE_VALUE));
+		QualifyingRelationshipAttribute LateralityAttribute = new QualifyingRelationshipAttribute (lat, side, RF1Constants.MUST_REFINE);
+		
+		try(FileWriter fw = new FileWriter(filePath, true);
+				BufferedWriter bw = new BufferedWriter(fw);
+				PrintWriter out = new PrintWriter(bw))
+			{
+				for (Concept thisConcept : allConcepts) {
+					if (LateralityIndicator.hasLateralityIndicator(thisConcept.getSctId(), LateralityIndicator.Lattomidsag.YES)) {
+						if (!thisConcept.hasAttribute(LateralityAttribute)) {
+							String rf1Line = FIELD_DELIMITER + thisConcept.getSctId() + commonRF1;
+							out.println(rf1Line);
+						}
+					}
+					
+				}
+			}catch (IOException e){
+				throw new RF1ConversionException ("Failure while output Laterality Relationships: " + e.toString());
+			}
+	}
+
+
 
 	private String getQualifyingRelationshipFilepath(String releaseDate,
 			EditionConfig editionConfig, File exportArea) throws RF1ConversionException {

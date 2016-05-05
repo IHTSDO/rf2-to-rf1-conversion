@@ -4,7 +4,8 @@ public interface RF2SchemaConstants {
 
 	public final Long SNOMED_ROOT_CONCEPT = 138875005L;
 	public final String ADDITIONAL_RELATIONSHIP = "900000000000227009";
-	
+	public final String LATERALITY_ATTRIB = "272741003";
+	public final String SIDE_VALUE = "182353008";	
 	// id effectiveTime active moduleId sourceId destinationId relationshipGroup typeId characteristicTypeId modifierId
 	public static final String ISA = "116680003";
 	public static final Long ISA_ID = Long.parseLong(ISA);
