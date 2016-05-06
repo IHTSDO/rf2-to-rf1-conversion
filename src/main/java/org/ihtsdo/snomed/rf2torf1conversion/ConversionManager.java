@@ -5,6 +5,7 @@ import static org.ihtsdo.snomed.rf2torf1conversion.GlobalUtils.*;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,6 +43,8 @@ public class ConversionManager implements RF2SchemaConstants{
 	String intReleaseDate;
 	String extReleaseDate;
 	boolean includeHistory = false;
+	boolean includeAllQualifyingRelationships = false;
+	boolean includeLateralityIndicators = false;
 	boolean onlyHistory = false;
 	boolean isExtension = false;
 	boolean goInteractive = false;
@@ -164,6 +167,7 @@ public class ConversionManager implements RF2SchemaConstants{
 		//Set Windows Line separator as that's an RF1 standard
 		System.setProperty("line.separator", "\r\n");
 		ConversionManager cm = new ConversionManager();
+		cm.askForLateralityFile();
 		cm.doRf2toRf1Conversion(args);
 	}
 
@@ -230,17 +234,20 @@ public class ConversionManager implements RF2SchemaConstants{
 			exportRF1Data(extExportMap, releaseDate, releaseDate, knownEditionMap.get(edition), exportArea);
 */
 			exportArea = Files.createTempDir();
+			String filePath = getQualifyingRelationshipFilepath(/*releaseDate*/ "20160131", knownEditionMap.get(edition), exportArea);
 			print("\nLoading Inferred Relationship Hierarchy for Qualifying Relationship computation...");
 			loadRelationshipHierarchy(intLoadingArea);
-			Set<QualifyingRelationshipAttribute> ruleAttributes = loadQualifyingRelationshipRules();
 			
-			print ("\nGenerating qualifying relationships");
-			String filePath = getQualifyingRelationshipFilepath(/*releaseDate*/ "20160131", knownEditionMap.get(edition), exportArea);
-			generateQualifyingRelationships(ruleAttributes, filePath);
+			if (includeAllQualifyingRelationships) {
+				print ("\nGenerating qualifying relationships");
+				Set<QualifyingRelationshipAttribute> ruleAttributes = loadQualifyingRelationshipRules();
+				generateQualifyingRelationships(ruleAttributes, filePath);
+			}
 			
-			debug ("\nGenerating laterality qualifying relationships");
-			loadLateralityIndicators();
-			generateLateralityRelationships(filePath);
+			if (includeLateralityIndicators) {
+				print ("\nGenerating laterality qualifying relationships");
+				generateLateralityRelationships(filePath);
+			}
 			
 			print("\nZipping archive");
 			createArchive(exportArea);
@@ -414,7 +421,7 @@ public class ConversionManager implements RF2SchemaConstants{
 
 	private void init(String[] args, File dbLocation) throws RF1ConversionException {
 		if (args.length < 1) {
-			print("Usage: java ConversionManager [-v] [-h] [-i] [-u <unzip location>] <rf2 archive location> [<rf2 extension archive>]");
+			print("Usage: java ConversionManager [-v] [-h] [-i] [-q] [-u <unzip location>] <rf2 archive location> [<rf2 extension archive>]");
 			exit();
 		}
 		boolean isUnzipLocation = false;
@@ -431,6 +438,8 @@ public class ConversionManager implements RF2SchemaConstants{
 				onlyHistory = true;
 			} else if (thisArg.equals("-u")) {
 				isUnzipLocation = true;
+			} else if (thisArg.equals("-q")) {
+				includeAllQualifyingRelationships = true;
 			} else if (isUnzipLocation) {
 				unzipLocation = new File(thisArg);
 				if (!unzipLocation.isDirectory()) {
@@ -528,10 +537,9 @@ public class ConversionManager implements RF2SchemaConstants{
 		return attributes;
 	}
 	
-	private void loadLateralityIndicators() throws RF1ConversionException {
+	private void loadLateralityIndicators(File lateralityFile) throws RF1ConversionException {
 		
-		InputStream is = ConversionManager.class.getResourceAsStream(LATERALITY_FILE);
-		try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+		try (BufferedReader br = new BufferedReader(new FileReader(lateralityFile))) {
 			String line;
 			boolean firstLine = true;
 			while ((line = br.readLine()) != null) {
@@ -636,6 +644,31 @@ public class ConversionManager implements RF2SchemaConstants{
 			throw new RF1ConversionException("Unable to create file for Qualifying Relationships: " + e);
 		}
 		return filePath;
+	}
+	
+
+	private void askForLateralityFile() {
+		try (Scanner in = new Scanner(System.in)) {
+			print ("Do you wish to create Lateralized Qualifying Relationships? [Y/N]: ");
+			String response = in.nextLine().trim();
+			if (response.toUpperCase().equals("Y")) {
+				print ("Please provide laterality text file location: ");
+				String latFileLPath = in.nextLine().trim();
+				File lateralityFile = new File(latFileLPath);
+				if (!lateralityFile.exists()) {
+					print ("File not found: " + latFileLPath);
+					askForLateralityFile();
+				} else {
+					try{
+						loadLateralityIndicators(lateralityFile);
+						includeLateralityIndicators = true;
+					} catch (Exception e) {
+						print ("Failed to load Laterality text file due to " + e.getMessage());
+						askForLateralityFile();
+					}
+				}
+			}
+		}
 	}
 
 }
