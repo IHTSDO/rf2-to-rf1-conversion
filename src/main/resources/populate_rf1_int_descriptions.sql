@@ -86,7 +86,6 @@ SET t.DESCRIPTIONSTATUS = COALESCE (
 	and s.refSetId = @DInactivationRefSet
 	AND s.active = 1,t.descriptionstatus);
 
-
 -- Where the concept has limited status (6), the description should too
 UPDATE rf21_term t
 SET t.DESCRIPTIONSTATUS = 6
@@ -96,9 +95,19 @@ WHERE EXISTS (
 	AND c.conceptstatus = 6 )
 AND t.DESCRIPTIONSTATUS = 8;
 
+-- Where the description has a REFERS_TO attribute, the status should be 7 - Inappropriate
+SET @RefersToRefset = '900000000000531004';
+UPDATE rf21_term t
+SET t.DESCRIPTIONSTATUS = 7
+WHERE EXISTS (
+	SELECT 1 FROM rf21_crefset s
+	where t.descriptionid = s.referencedComponentId
+	and s.refsetId = @RefersToRefset
+	and s.active = 1)
+AND t.DESCRIPTIONSTATUS = 1;
+
 -- Where the description is acceptable in one dialect and preferred in the other, set the 
 -- common description type to 0 - unspecified;
-
 UPDATE rf21_term t
 SET t.DESC_TYPE = 0
 WHERE EXISTS (
