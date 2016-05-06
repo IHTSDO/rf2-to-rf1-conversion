@@ -191,7 +191,7 @@ public class ConversionManager implements RF2SchemaConstants{
 				isExtension = true;
 			} 
 			
-/*			long maxOperations = getMaxOperations();
+			long maxOperations = getMaxOperations();
 			if (isExtension) {
 				maxOperations = includeHistory? maxOperations : 388;
 			} else {
@@ -228,8 +228,7 @@ public class ConversionManager implements RF2SchemaConstants{
 			exportArea = Files.createTempDir();
 			exportRF1Data(intExportMap, releaseDate, intReleaseDate, knownEditionMap.get(edition), exportArea);
 			exportRF1Data(extExportMap, releaseDate, releaseDate, knownEditionMap.get(edition), exportArea);
-*/
-			exportArea = Files.createTempDir();
+
 			print("\nLoading Inferred Relationship Hierarchy for Qualifying Relationship computation...");
 			loadRelationshipHierarchy(intLoadingArea);
 			Set<QualifyingRelationshipAttribute> ruleAttributes = loadQualifyingRelationshipRules();
