@@ -533,8 +533,13 @@ public class ConversionManager implements RF2SchemaConstants{
 		InputStream is = ConversionManager.class.getResourceAsStream(LATERALITY_FILE);
 		try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
 			String line;
+			boolean firstLine = true;
 			while ((line = br.readLine()) != null) {
-				LateralityIndicator.registerIndicator(line);
+				if (!firstLine) {
+					LateralityIndicator.registerIndicator(line);
+				} else {
+					firstLine = false;
+				}
 			}
 		} catch (IOException ioe) {
 			throw new RF1ConversionException ("Unable to import laterality indicators file " + LATERALITY_FILE, ioe);

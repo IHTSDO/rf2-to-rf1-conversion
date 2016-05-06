@@ -33,6 +33,9 @@ public class LateralityIndicator {
 	
 	public static boolean hasLateralityIndicator (Long sctId, Lattomidsag targetIndicator) {
 		Lattomidsag indicator = lateralityIndicators.get(sctId);
+		if (indicator == null) {
+			return false;
+		}
 		return indicator.equals(targetIndicator);
 	}
 }
