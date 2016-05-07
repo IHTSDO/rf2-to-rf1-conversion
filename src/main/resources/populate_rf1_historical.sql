@@ -192,9 +192,9 @@ AND NOT EXISTS (
 	AND s2.active = s.active
 	AND s2.effectiveTime = ( SELECT max(s3.effectiveTime) FROM rf2_crefset_sv s3
 								WHERE s3.referencedComponentId = s.referencedComponentId
-								AND s3.linkedComponentId = s.linkedComponentId
-								AND s3.active = s.active
-								AND S3.effectiveTime < s.effectiveTime));
+								-- Not matching linkedComponentId because we want to include the situation 
+								-- where the reason changes.
+								AND s3.effectiveTime < s.effectiveTime));
 
 SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
 
