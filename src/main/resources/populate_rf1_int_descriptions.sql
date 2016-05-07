@@ -100,7 +100,7 @@ SET @RefersToRefset = '900000000000531004';
 UPDATE rf21_term t
 SET t.DESCRIPTIONSTATUS = 7
 WHERE EXISTS (
-	SELECT 1 FROM rf21_crefset s
+	SELECT 1 FROM rf2_crefset s
 	where t.descriptionid = s.referencedComponentId
 	and s.refsetId = @RefersToRefset
 	and s.active = 1)
