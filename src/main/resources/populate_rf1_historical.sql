@@ -16,7 +16,7 @@ SET @CONCEPT_NON_CURRENT = 8;
 SET @ADDED = 0;
 SET @NOT_SET = -1;
 
-SET @COMPONENT_OF_INTEREST = 2532249011;
+SET @COMPONENT_OF_INTEREST = 2966242011;
 
 -- PARALLEL_START;
 -- Insert all concept changes into history and we'll work out what changes where made
@@ -148,12 +148,15 @@ AND NOT EXISTS (
 	and ch.status = magicNumberFor(s.linkedComponentId)
 );
 
+SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
+
 -- DESCRIPTION INACTIVATION
 -- Where there is no other change, but the inactivation indicator
 -- is modified, add a new row.
 -- Where the row is inactivating, the change type becomes unknown ie 1 or perhaps the component is 
 -- now active in which case 0.
 -- But not when there exists a previous entry has the same status - is not a change in that case.
+-- And not where there is a duplicate inactivation with the same active state
 INSERT INTO rf21_COMPONENTHISTORY
 SELECT s.referencedComponentId, s.effectiveTime, 1, 
 CASE WHEN s.active = 1 THEN magicNumberFor(s.linkedComponentId) else 
@@ -179,7 +182,19 @@ AND NOT EXISTS (
 								WHERE ch.componentId = ch2.componentId
 								AND ch2.releaseVersion <= s.effectiveTime )
 	and ch.status = magicNumberFor(s.linkedComponentId)
-);
+)
+AND NOT EXISTS (
+	-- ensure previous duplicate inactivation indicator does not exist
+	SELECT 1 from rf2_crefset_sv s2
+	WHERE s2.refsetId = s.refsetId
+	AND s2.referencedComponentId = s.referencedComponentId
+	AND s2.linkedComponentId = s.linkedComponentId
+	AND s2.active = s.active
+	AND s2.effectiveTime = ( SELECT max(s3.effectiveTime) FROM rf2_crefset_sv s3
+								WHERE s3.referencedComponentId = s.referencedComponentId
+								AND s3.linkedComponentId = s.linkedComponentId
+								AND s3.active = s.active
+								AND S3.effectiveTime < s.effectiveTime));
 
 SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
 
@@ -193,12 +208,22 @@ DELETE from rf21_COMPONENTHISTORY ch WHERE EXISTS
 
 -- Where there's been a change in the language acceptability, capture
 -- that too.
--- A change from PREF to ACCEPT results in DS_CHANGE
+-- A change from PREF to ACCEPT results in DT_CHANGE
 -- Just becoming acceptable for the first time is a LC_CHANGE
 INSERT INTO rf21_COMPONENTHISTORY
 SELECT DISTINCT s.referencedComponentId, s.effectiveTime, 2, 
 CASE WHEN s.active = 1 THEN 0 else 1 END AS status, 
-@LC_CHANGE AS reason, 
+CASE WHEN EXISTS 
+	( SELECT 1 FROM rf2_crefset_sv s2
+		WHERE s2.refsetId = s.refsetId
+		AND s2.referencedComponentId = s.referencedComponentId
+		AND NOT s2.linkedComponentId = s.linkedComponentId
+		AND s2.effectiveTime = ( SELECT MAX(s3.effectiveTime) FROM rf2_crefset_sv s3
+								where s3.refsetId = s.refsetId
+								AND NOT s3.linkedComponentId = s.linkedComponentId
+								and s3.referencedComponentId = s.referencedComponentId
+								and s3.effectiveTime < s.effectiveTime)
+	) THEN @DT_CHANGE ELSE @LC_CHANGE END AS reason, 
 false AS isConcept,
 null
 FROM rf2_crefset_sv s
@@ -339,8 +364,8 @@ WHERE EXISTS (
   WHERE ch.componentid = ch2.componentId
   AND ch.releaseversion = ch2.releaseVersion
   AND ( 
-     ch.changeType > ch2.changeType
-     OR (ch.changeType = ch2.changeType AND ch.status = 1 AND NOT ch2.status = 1)
-     OR (ch.changeType = ch2.changeType AND ch.status = 0 AND NOT ch2.status = 0)
-     )
+	 ch.changeType > ch2.changeType
+	 OR (ch.changeType = ch2.changeType AND ch.status = 1 AND NOT ch2.status = 1)
+	 OR (ch.changeType = ch2.changeType AND ch.status = 0 AND NOT ch2.status = 0)
+	 )
 );
