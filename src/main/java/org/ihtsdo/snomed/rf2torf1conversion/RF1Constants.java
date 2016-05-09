@@ -187,6 +187,19 @@ public class RF1Constants {
 	public static byte translateActive(boolean rf2Active) {
 		return rf2Active ? (byte) 0 : (byte) 1;
 	}
+	
+	public static byte translateDescriptionActive(boolean rf2DescActive, boolean rf2ConActive) {
+		//If the description is inactive, the RF1 status is 1
+		//but if it's active, then if the CONCEPT is inactive, then that's indicated
+		//with status 8
+		if (!rf2DescActive) {
+			return (byte) 1;  //Inactive, reason unknown
+		} else if (!rf2ConActive) {
+			return (byte) 8;  //Concept inactive for active description
+		} else {
+			return (byte) 0;  //Active 
+		}
+	}
 
 	public static byte translateDescType(String sctid) {
 		return sctid.equals(FSN) ? (byte) 3 : (byte) 2;

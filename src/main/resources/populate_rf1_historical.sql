@@ -16,7 +16,7 @@ SET @CONCEPT_NON_CURRENT = 8;
 SET @ADDED = 0;
 SET @NOT_SET = -1;
 
-SET @COMPONENT_OF_INTEREST = 2966242011;
+SET @COMPONENT_OF_INTEREST = 2966303013;
 
 -- PARALLEL_START;
 -- Insert all concept changes into history and we'll work out what changes where made
@@ -160,12 +160,16 @@ SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
 INSERT INTO rf21_COMPONENTHISTORY
 SELECT s.referencedComponentId, s.effectiveTime, 1, 
 CASE WHEN s.active = 1 THEN magicNumberFor(s.linkedComponentId) else 
- (  -- Find the most recent active flag for the description
- 	select statusFor(d.active) from rf2_term_sv d
+ (  -- Find the most recent active flag for the description and concept
+ 	select descriptionStatusFor(d.active, c.active) from rf2_term_sv d, rf2_concept_sv c
  	where d.id = s.referencedComponentId
+ 	and c.id = d.conceptId
  	and d.effectiveTime = ( select max(d2.effectiveTime) from rf2_term_sv d2
  							where d2.id = d.id
  							and d2.effectiveTime <= s.effectiveTime)
+ 	and c.effectiveTime = (select max(c2.effectiveTime) from rf2_concept_sv c2
+ 							where c2.id = c.id
+ 							and c2.effectiveTime <= s.effectiveTime)
  ) END AS status, 
 @DS_CHANGE AS reason, 
  false isConcept,

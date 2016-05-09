@@ -8,6 +8,8 @@ CREATE ALIAS moduleSourceFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Consta
 
 CREATE ALIAS statusFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.translateActive";
 
+CREATE ALIAS descriptionStatusFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.translateDescriptionActive";
+
 CREATE ALIAS descTypeFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.translateDescType";
 
 CREATE ALIAS capitalStatusFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.translateCaseSensitive";
