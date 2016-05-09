@@ -9,6 +9,7 @@ SET @DESC_INACT_RS = 900000000000490003;
 SET @DS_CHANGE = 'DESCRIPTIONSTATUS CHANGE';
 SET @DT_CHANGE = 'DESCRIPTIONTYPE CHANGE';
 SET @LC_CHANGE = 'LANGUAGECODE CHANGE';
+SET @DT_LC_CHANGE = 'DESCRIPTIONTYPE CHANGE, LANGUAGECODE CHANGE';
 SET @ICS_CHANGE = 'INITIALCAPITALSTATUS CHANGE';
 SET @FSN_CHANGE = 'FULLYSPECIFIEDNAME CHANGE';
 SET @HISTORY_START = 20140131;
@@ -16,7 +17,7 @@ SET @CONCEPT_NON_CURRENT = 8;
 SET @ADDED = 0;
 SET @NOT_SET = -1;
 
-SET @COMPONENT_OF_INTEREST = 393215008;
+SET @COMPONENT_OF_INTEREST = 2966735010;
 
 -- PARALLEL_START;
 -- Insert all concept changes into history and we'll work out what changes where made
@@ -210,10 +211,11 @@ DELETE from rf21_COMPONENTHISTORY ch WHERE EXISTS
   AND ch.releaseVersion = ch2.releaseVersion
   AND ch.status = @NOT_SET and NOT ch2.status = @NOT_SET);
 
--- Where there's been a change in the language acceptability, capture
--- that too.
+-- Language Refset Processing
+-- Where there's been a change in the language acceptability, capture that too.
 -- A change from PREF to ACCEPT results in DT_CHANGE
 -- Just becoming acceptable for the first time is a LC_CHANGE
+-- A first time change in both lang refsets generates DT_LC_CHANGE
 INSERT INTO rf21_COMPONENTHISTORY
 SELECT DISTINCT s.referencedComponentId, s.effectiveTime, 2, 
 CASE WHEN s.active = 1 THEN 0 else 1 END AS status, 
@@ -227,7 +229,20 @@ CASE WHEN EXISTS
 								AND NOT s3.linkedComponentId = s.linkedComponentId
 								and s3.referencedComponentId = s.referencedComponentId
 								and s3.effectiveTime < s.effectiveTime)
-	) THEN @DT_CHANGE ELSE @LC_CHANGE END AS reason, 
+	) THEN @DT_CHANGE ELSE (
+		CASE WHEN EXISTS ( SELECT 1 FROM rf2_crefset_sv s4, rf2_crefset_sv s5
+							WHERE s4.referencedComponentId = s.referencedComponentId
+							AND s5.referencedComponentId = s.referencedComponentId
+							AND s4.effectiveTime = s5.effectiveTime
+							AND s4.refsetId = @USRefSet
+							AND s5.refsetId = @GBRefSet
+							AND s4.active = s5.active
+							AND NOT EXISTS (SELECT 1 FROM rf2_crefset_sv s6 WHERE 
+											S4.referencedComponentId = s6.referencedComponentId
+											AND s6.refsetId IN (@USRefSet, @GBRefSet)
+											AND s6.effectiveTime < s4.effectiveTime)
+							) THEN @DT_LC_CHANGE ELSE
+	@LC_CHANGE END) END AS reason, 
 false AS isConcept,
 null
 FROM rf2_crefset_sv s
@@ -262,7 +277,15 @@ COALESCE ( SELECT magicNumberFor(s.linkedComponentId)
 							WHERE s2.referencedComponentId = s.referencedComponentId
 							AND s2.refsetId = s.refSetId
 							AND s2.effectiveTime <= t.effectiveTime)
-	AND s.active = 1,0),
+	AND s.active = 1,
+	-- WHERE an inactivation indicator is not found, use the status of the 
+	-- most recent status for that component
+		SELECT statusFor(c.active) FROM rf2_concept_sv c
+		WHERE t.conceptId = c.id
+		AND c.effectiveTime = ( SELECT max(c2.effectiveTime) FROM rf2_concept_sv c2
+								WHERE c2.id = c.id
+								AND c2.effectiveTime <= t.effectiveTime)
+	),
 @FSN_CHANGE, TRUE, null 
 FROM rf2_term_sv t
 WHERE t.typeid = @FSN
