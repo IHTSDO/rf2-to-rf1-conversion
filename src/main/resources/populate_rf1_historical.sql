@@ -16,7 +16,7 @@ SET @CONCEPT_NON_CURRENT = 8;
 SET @ADDED = 0;
 SET @NOT_SET = -1;
 
-SET @COMPONENT_OF_INTEREST = 2966303013;
+SET @COMPONENT_OF_INTEREST = 393215008;
 
 -- PARALLEL_START;
 -- Insert all concept changes into history and we'll work out what changes where made
@@ -253,12 +253,15 @@ AND NOT EXISTS (
 -- The status code in this case relates to the inactivation reason for the previous description
 INSERT INTO rf21_COMPONENTHISTORY
 SELECT t.conceptid, t.effectiveTime, '2', 
--- Find the inactivation reason for the concept, if it exists
-COALESCE ( SELECT max(magicNumberFor(s.linkedComponentId))
+-- Find the most recent inactivation reason for the concept, if it exists
+COALESCE ( SELECT magicNumberFor(s.linkedComponentId)
 	from rf2_crefset_sv s
 	where t.conceptId = s.referencedComponentId
 	and s.refSetId = @CONCEPT_INACT_RS
-	AND s.effectiveTime <= t.effectiveTime
+	AND s.effectiveTime = ( SELECT max(s2.effectiveTime) FROM rf2_crefset_sv s2
+							WHERE s2.referencedComponentId = s.referencedComponentId
+							AND s2.refsetId = s.refSetId
+							AND s2.effectiveTime <= t.effectiveTime)
 	AND s.active = 1,0),
 @FSN_CHANGE, TRUE, null 
 FROM rf2_term_sv t
