@@ -216,6 +216,7 @@ DELETE from rf21_COMPONENTHISTORY ch WHERE EXISTS
 -- A change from PREF to ACCEPT results in DT_CHANGE
 -- Just becoming acceptable for the first time is a LC_CHANGE
 -- A first time change in both lang refsets generates DT_LC_CHANGE
+-- and not meta data components
 INSERT INTO rf21_COMPONENTHISTORY
 SELECT DISTINCT s.referencedComponentId, s.effectiveTime, 2, 
 CASE WHEN s.active = 1 THEN 0 else 1 END AS status, 
@@ -249,10 +250,13 @@ FROM rf2_crefset_sv s
 WHERE s.refsetId IN (@USRefSet, @GBRefSet)
 AND s.effectiveTime >= @HISTORY_START
 -- We'll also pick up Text Definitions from the Lang Refset, so check it exists 
--- in the descriptions table
+-- in the descriptions table, and not as a metadata concept
 AND EXISTS (
-	SELECT 1 FROM rf2_term_sv t
+	SELECT 1 FROM rf2_term_sv t, rf2_term_sv t2
 	WHERE t.id = s.referencedComponentId
+	AND t.conceptid = t2.conceptId
+	AND t2.typeid = @FSN
+	AND NOT t2.term like '%metadata concept)'
 )
 -- And make sure there isn't already a change noted for this component / effective time
 AND NOT EXISTS (
