@@ -18,7 +18,7 @@ SET @CONCEPT_NON_CURRENT = 8;
 SET @ADDED = 0;
 SET @NOT_SET = -1;
 
-SET @COMPONENT_OF_INTEREST = 2966735010;
+SET @COMPONENT_OF_INTEREST = 3011635014;
 
 -- PARALLEL_START;
 -- Insert all concept changes into history and we'll work out what changes where made
@@ -216,7 +216,7 @@ DELETE from rf21_COMPONENTHISTORY ch WHERE EXISTS
 -- Where there's been a change in the language acceptability, capture that too.
 -- A change from PREF to ACCEPT results in DT_CHANGE
 -- Just becoming acceptable for the first time is a LC_CHANGE
--- A first time change in both lang refsets generates DT_LC_CHANGE
+-- A first time change in both lang refsets generates DT_LC_CHANGE [TRY ANY CHANGE]
 -- and not meta data components
 INSERT INTO rf21_COMPONENTHISTORY
 SELECT DISTINCT s.referencedComponentId, s.effectiveTime, 2, 
@@ -232,17 +232,10 @@ CASE WHEN EXISTS
 								and s3.referencedComponentId = s.referencedComponentId
 								and s3.effectiveTime < s.effectiveTime)
 	) THEN @DT_CHANGE ELSE (
-		CASE WHEN EXISTS ( SELECT 1 FROM rf2_crefset_sv s4, rf2_crefset_sv s5
+		CASE WHEN EXISTS ( SELECT 1 FROM rf2_crefset_sv s4
 							WHERE s4.referencedComponentId = s.referencedComponentId
-							AND s5.referencedComponentId = s.referencedComponentId
-							AND s4.effectiveTime = s5.effectiveTime
-							AND s4.refsetId = @USRefSet
-							AND s5.refsetId = @GBRefSet
-							AND s4.active = s5.active
-							AND NOT EXISTS (SELECT 1 FROM rf2_crefset_sv s6 WHERE 
-											S4.referencedComponentId = s6.referencedComponentId
-											AND s6.refsetId IN (@USRefSet, @GBRefSet)
-											AND s6.effectiveTime < s4.effectiveTime)
+							AND s4.effectiveTime = s.effectiveTime
+							AND s4.refsetId IN (@USRefSet,@GBRefSet)
 							) THEN @DT_LC_CHANGE ELSE
 	@LC_CHANGE END) END AS reason, 
 false AS isConcept,
