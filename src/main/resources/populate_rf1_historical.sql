@@ -33,11 +33,10 @@ SELECT c.id, c.effectiveTime,  @NOT_SET,  @NOT_SET, '', TRUE,
 	AND c.effectiveTime >= @HISTORY_START
 )
 FROM rf2_concept_sv c
-WHERE NOT ( c.moduleId = @MODEL_MODULE
-		AND EXISTS ( SELECT 1 from rf2_term_sv t
+WHERE NOT EXISTS ( SELECT 1 from rf2_term_sv t
 						WHERE t.typeid = @FSN
 						AND t.conceptid = c.id
-						AND t.term like '%metadata concept)' ))
+						AND t.term like '%metadata concept)' )
 AND c.effectiveTime >= @HISTORY_START;
 
 -- Where the concept entry in the history has no previous entry in the history, 
