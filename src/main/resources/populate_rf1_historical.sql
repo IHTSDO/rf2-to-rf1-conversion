@@ -4,6 +4,7 @@ SET @CONCEPT_INACT_RS = 900000000000489007;
 SET @USRefSet = '900000000000509007';
 SET @GBRefSet = '900000000000508004';
 SET @CS_CHANGE = 'CONCEPTSTATUS CHANGE';
+SET @PREFERRED = '900000000000548007';
 
 SET @DESC_INACT_RS = 900000000000490003;
 SET @DS_CHANGE = 'DESCRIPTIONSTATUS CHANGE';
@@ -214,7 +215,8 @@ DELETE from rf21_COMPONENTHISTORY ch WHERE EXISTS
 -- Where there's been a change in the language acceptability, capture that too.
 -- A change from PREF to ACCEPT results in DT_CHANGE
 -- Just becoming acceptable for the first time is a LC_CHANGE
--- A first time change in both lang refsets generates DT_LC_CHANGE [TRY ANY CHANGE]
+-- A first time change in either lang refsets generates DT_LC_CHANGE
+-- unless it was previously Preferred in the other language (seriously?)
 -- and not meta data components
 INSERT INTO rf21_COMPONENTHISTORY
 SELECT DISTINCT s.referencedComponentId, s.effectiveTime, 2, 
@@ -234,6 +236,14 @@ CASE WHEN EXISTS
 							WHERE s4.referencedComponentId = s.referencedComponentId
 							AND s4.effectiveTime = s.effectiveTime
 							AND s4.refsetId IN (@USRefSet,@GBRefSet)
+							-- Check for previous preferred in the other language
+							AND NOT EXISTS ( SELECT 1 FROM rf2_crefset_sv s5
+											 WHERE s5.referencedComponentId = s4.referencedComponentId
+											 AND s5.refsetId IN (@USRefSet,@GBRefSet)
+											 AND NOT s5.refsetId = S4.refsetid
+											 AND s5.effectiveTime < s4.effectiveTime
+											 AND s5.linkedComponentId = s4.linkedComponentId 
+											 AND s5.linkedComponentId = @PREFERRED)
 							) THEN @DT_LC_CHANGE ELSE
 	@LC_CHANGE END) END AS reason, 
 false AS isConcept,
