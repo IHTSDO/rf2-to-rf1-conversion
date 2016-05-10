@@ -11,6 +11,7 @@ SET @DT_CHANGE = 'DESCRIPTIONTYPE CHANGE';
 SET @LC_CHANGE = 'LANGUAGECODE CHANGE';
 SET @DT_LC_CHANGE = 'DESCRIPTIONTYPE CHANGE, LANGUAGECODE CHANGE';
 SET @ICS_CHANGE = 'INITIALCAPITALSTATUS CHANGE';
+SET @DT_ICS_CHANGE = 'DESCRIPTIONTYPE CHANGE, INITIALCAPITALSTATUS CHANGE';
 SET @FSN_CHANGE = 'FULLYSPECIFIEDNAME CHANGE';
 SET @HISTORY_START = 20140131;
 SET @CONCEPT_NON_CURRENT = 8;
@@ -319,7 +320,8 @@ SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
 
 -- Where there was a component change and the previous version had a different
 -- case sensitivity, set an INITIALCAPITALSTATUS CHANGE.  For descriptions only.
--- but not where the was also a change in active status, which takes priority
+-- but not where the was also a change in active status, which takes priority.
+-- If both language codes changed at the same time, then the reason becomes @DT_ICS_CHANGE
 UPDATE rf21_COMPONENTHISTORY ch
 SET changeType = 2,
 -- Status will be taken from the most recent active inactivation indicator
@@ -334,7 +336,12 @@ STATUS = COALESCE (
 							AND s.referencedComponentId = s2.referencedComponentId
 							AND s2.effectivetime <= ch.releaseVersion)
 	,0) ,
-reason = @ICS_CHANGE
+reason = CASE WHEN EXISTS ( SELECT 1 FROM rf2_crefset_sv s2
+							WHERE s2.referencedComponentId = ch.componentId
+							AND s2.effectiveTime = ch.releaseVersion
+							AND s2.refsetId IN ( @USRefSet, @GBRefSet)
+							)
+THEN @DT_ICS_CHANGE ELSE @ICS_CHANGE END
 WHERE ch.isConcept = FALSE
 AND ch.changeType =  @NOT_SET
 AND EXISTS (
