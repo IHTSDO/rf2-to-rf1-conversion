@@ -270,6 +270,7 @@ AND NOT EXISTS (
 -- Watch our for changes to case sensitivity.  Filter out cases where earlier active row 
 -- with different case sensitivity exists.
 -- The status code in this case relates to the inactivation reason for the previous description
+-- Filter out metadata components
 INSERT INTO rf21_COMPONENTHISTORY
 SELECT t.conceptid, t.effectiveTime, '2', 
 -- Find the most recent inactivation reason for the concept, if it exists
@@ -301,13 +302,17 @@ AND NOT EXISTS (
 	and t.effectiveTime = ch2.releaseversion
 	and ch2.changetype = '0'
 )
-AND NOT EXISTS (
+AND NOT EXISTS (  -- Filter out metadata components
 	SELECT 1 FROM rf2_term_sv t2
 	where t.id = t2.id
 	and t2.effectiveTime < t.effectiveTime
 	and t2.active = 1
 	and NOT t2.casesignificanceid = t.caseSignificanceId
-);
+)
+AND NOT EXISTS ( SELECT 1 from rf2_term_sv t2
+						WHERE t2.typeid = @FSN
+						AND t2.conceptid = t.conceptId
+						AND t2.term like '%metadata concept)' );
 
 SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
 
