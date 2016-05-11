@@ -6,7 +6,7 @@ SET @GBRefSet = '900000000000508004';
 SET @CS_CHANGE = 'CONCEPTSTATUS CHANGE';
 SET @PREFERRED = '900000000000548007';
 
-SET @DESC_INACT_RS = 900000000000490003;
+SET @DESC_INACT_RS = '900000000000490003';
 SET @DS_CHANGE = 'DESCRIPTIONSTATUS CHANGE';
 SET @DT_CHANGE = 'DESCRIPTIONTYPE CHANGE';
 SET @LC_CHANGE = 'LANGUAGECODE CHANGE';
@@ -19,7 +19,7 @@ SET @CONCEPT_NON_CURRENT = 8;
 SET @ADDED = 0;
 SET @NOT_SET = -1;
 
-SET @COMPONENT_OF_INTEREST = 228937003;
+SET @COMPONENT_OF_INTEREST = 3291619012;
 
 -- PARALLEL_START;
 -- Insert all concept changes into history and we'll work out what changes where made
@@ -55,6 +55,7 @@ AND NOT EXISTS (
 	AND cf.effectiveTime < ch.releaseVersion
 );
 
+-- Add all Description entries from the full file - creations, activations and inactivations
 INSERT INTO rf21_COMPONENTHISTORY
 SELECT t.id, t.effectiveTime,  @NOT_SET,  @NOT_SET, '', FALSE, 
 (	-- Work out the most recent change preceeding this change
@@ -91,27 +92,25 @@ CREATE INDEX idx_comphist_status ON rf21_COMPONENTHISTORY(status);
 CREATE INDEX idx_comphist_prev ON rf21_COMPONENTHISTORY(previousVersion);
 CREATE INDEX idx_comphist_c ON rf21_COMPONENTHISTORY(isConcept);
 
--- Where the term has been created and there is immediately an inactivation indicator
+SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
+
+-- Where the term has been created and there is immediate inactivation indicator
 UPDATE rf21_COMPONENTHISTORY ch
-SET STATUS = COALESCE ( SELECT magicNumberFor(s.linkedComponentId)
-	from rf2_crefset_sv s
-	where s.referencedComponentId = ch.componentId
-	and s.refSetId = @DESC_INACT_RS
-	AND s.effectiveTime = ch.releaseVersion
-	AND s.active = 1,0)
+-- Either find an inactivation indicator, or work the status out from the description and concept status
+SET STATUS = SELECT magicNumberFor(s.linkedComponentId)
+						FROM rf2_crefset_sv s
+						WHERE s.refsetId = @DESC_INACT_RS
+						AND s.active = 1
+						AND s.referencedComponentId = ch.componentId
+						AND s.effectiveTime = ch.releaseVersion
 WHERE isConcept = false
 AND changeType = @ADDED
 AND EXISTS (
-	SELECT 1 FROM rf2_concept_sv cf, rf2_term_sv tf
-	WHERE cf.id = tf.conceptid
-	AND tf.id = ch.componentid
-	AND cf.active = 0
-	AND cf.effectiveTime = ( SELECT max(effectiveTime) FROM rf2_concept_sv cf2
-								WHERE cf2.id = cf.id
-								AND cf.effectiveTime <= ch.releaseVersion)
-);
-
-
+	SELECT 1 FROM rf2_crefset_sv s
+	WHERE s.refsetId = @DESC_INACT_RS
+	AND s.active = 1
+	AND s.referencedComponentId = ch.componentId
+	AND s.effectiveTime = ch.releaseVersion);
 
 SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
 
@@ -430,3 +429,5 @@ WHERE EXISTS (
 	 OR (ch.changeType = ch2.changeType AND ch.status = 0 AND NOT ch2.status = 0)
 	 )
 );
+
+SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
