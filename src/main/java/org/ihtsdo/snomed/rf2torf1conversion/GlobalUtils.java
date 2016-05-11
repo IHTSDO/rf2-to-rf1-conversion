@@ -21,6 +21,7 @@ public class GlobalUtils {
 
 	private static long maxOperations = 399;
 	private static long queriesRun = 0;
+	private static String BETA_PREFIX = "x";
 
 	public static void print(String msg) {
 		System.out.println(msg);
@@ -52,11 +53,15 @@ public class GlobalUtils {
 				while (ze != null) {
 					if (!ze.isDirectory()) {
 						Path p = Paths.get(ze.getName());
-						String extractedFileName = p.getFileName().toString();
+						String extractedFilename = p.getFileName().toString();
 						for (String matchStr : matchArray) {
-							if (matchStr == null || extractedFileName.contains(matchStr)) {
-								debug("Extracting " + extractedFileName);
-								File extractedFile = new File(targetDir, extractedFileName);
+							if (matchStr == null || extractedFilename.contains(matchStr)) {
+								//If the filename is a beta file with x prefix, remove the prefix
+								if (extractedFilename.startsWith(BETA_PREFIX)) {
+									extractedFilename = extractedFilename.substring(1);
+								}
+								debug("Extracting " + extractedFilename);
+								File extractedFile = new File(targetDir, extractedFilename);
 								OutputStream out = new FileOutputStream(extractedFile);
 								IOUtils.copy(zis, out);
 								IOUtils.closeQuietly(out);
