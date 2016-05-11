@@ -42,7 +42,7 @@ public class ConversionManager implements RF2SchemaConstants{
 	DBManager db;
 	String intReleaseDate;
 	String extReleaseDate;
-	boolean includeHistory = false;
+	boolean includeHistory = true; 
 	boolean includeAllQualifyingRelationships = false;
 	boolean includeLateralityIndicators = false;
 	boolean onlyHistory = false;
@@ -432,8 +432,6 @@ public class ConversionManager implements RF2SchemaConstants{
 				GlobalUtils.verbose = true;
 			} else if (thisArg.equals("-i")) {
 				goInteractive = true;
-			} else if (thisArg.equals("-h")) {
-				includeHistory = true;
 			} else if (thisArg.equals("-H")) {
 				includeHistory = true;
 				onlyHistory = true;
