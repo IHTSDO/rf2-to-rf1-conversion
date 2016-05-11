@@ -19,7 +19,7 @@ SET @CONCEPT_NON_CURRENT = 8;
 SET @ADDED = 0;
 SET @NOT_SET = -1;
 
-SET @COMPONENT_OF_INTEREST = 3011635014;
+SET @COMPONENT_OF_INTEREST = 228937003;
 
 -- PARALLEL_START;
 -- Insert all concept changes into history and we'll work out what changes where made
@@ -220,7 +220,18 @@ DELETE from rf21_COMPONENTHISTORY ch WHERE EXISTS
 -- and not meta data components
 INSERT INTO rf21_COMPONENTHISTORY
 SELECT DISTINCT s.referencedComponentId, s.effectiveTime, 2, 
-CASE WHEN s.active = 1 THEN 0 else 1 END AS status, 
+-- Need to allow for status 8 when concept was inactive at that time
+descriptionStatusFor(s.active, 
+			SELECT c.active FROM rf2_concept_sv c, rf2_term_sv t
+			WHERE t.id = s.referencedComponentId
+			AND t.effectiveTime = ( select max(t2.effectiveTime) from rf2_term_sv t2
+									where t2.id = t.id
+									and t2.effectiveTime <= s.effectiveTime)
+			AND c.id = t.conceptid
+			AND c.effectiveTime = ( select max(c2.effectiveTime) from rf2_concept_sv c2
+									where c2.id = c.id
+									and c2.effectiveTime <= s.effectiveTime)
+			) AS status, 
 CASE WHEN EXISTS 
 	( SELECT 1 FROM rf2_crefset_sv s2
 		WHERE s2.refsetId = s.refsetId
@@ -270,7 +281,7 @@ AND NOT EXISTS (
 -- When a description that is an FSN is added, but not at the same time as the concept
 -- then add a row to indicate an FSN change for the concept
 -- Watch our for changes to case sensitivity.  Filter out cases where earlier active row 
--- with different case sensitivity exists.
+-- with same description id but different case sensitivity exists.
 -- The status code in this case relates to the inactivation reason for the previous description
 -- Filter out metadata components
 INSERT INTO rf21_COMPONENTHISTORY
@@ -304,13 +315,16 @@ AND NOT EXISTS (
 	and t.effectiveTime = ch2.releaseversion
 	and ch2.changetype = '0'
 )
-AND NOT EXISTS (  -- Filter out metadata components
+AND NOT EXISTS (	--Filter out new rows that are just changes to case sensitivity
+					--Unless the actual text of the term has changed
 	SELECT 1 FROM rf2_term_sv t2
 	where t.id = t2.id
 	and t2.effectiveTime < t.effectiveTime
+	and t2.term = t.term
 	and t2.active = 1
 	and NOT t2.casesignificanceid = t.caseSignificanceId
 )
+-- Filter out metadata components
 AND NOT EXISTS ( SELECT 1 from rf2_term_sv t2
 						WHERE t2.typeid = @FSN
 						AND t2.conceptid = t.conceptId
