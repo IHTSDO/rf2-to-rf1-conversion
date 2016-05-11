@@ -98,14 +98,8 @@ public class RF1Constants {
 		rf1Map.put("900000000000487009", (byte) 10); /* Component moved elsewhere (foundation metadata concept) */
 		rf1Map.put("900000000000492006", (byte) 11); /* Pending move (foundation metadata concept) */
 		rf1Map.put("900000000000493001", null); /* Description inactivation value (foundation metadata concept) */
-		rf1Map.put("900000000000482003", (byte) 2); /* Duplicate component (foundation metadata concept) */
-		rf1Map.put("900000000000483008", (byte) 3); /* Outdated component (foundation metadata concept) */
-		rf1Map.put("900000000000485001", (byte) 5); /* Erroneous component (foundation metadata concept) */
-		rf1Map.put("900000000000486000", (byte) 6); /* Limited component (foundation metadata concept) */
 		rf1Map.put("900000000000494007", (byte) 7); /* Inappropriate component (foundation metadata concept) */
 		rf1Map.put("900000000000495008", (byte) 8); /* Concept non-current (foundation metadata concept) */
-		rf1Map.put("900000000000487009", (byte) 10); /* Component moved elsewhere (foundation metadata concept) */
-		rf1Map.put("900000000000492006", (byte) 11); /* Pending move (foundation metadata concept) */
 		rf1Map.put("900000000000546006", null); /* Inactive value (foundation metadata concept) */
 		rf1Map.put("900000000000545005", null); /* Active value (foundation metadata concept) */
 		rf1Map.put("900000000000458008", null); /* Attribute description (foundation metadata concept) */
