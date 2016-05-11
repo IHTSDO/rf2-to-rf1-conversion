@@ -196,7 +196,9 @@ public class ConversionManager implements RF2SchemaConstants{
 			} 
 			
 			long maxOperations = getMaxOperations();
-			if (isExtension) {
+			if (onlyHistory) {
+				maxOperations = 250;
+			} else if (isExtension) {
 				maxOperations = includeHistory? maxOperations : 388;
 			} else {
 				maxOperations = includeHistory? maxOperations : 391;
@@ -651,7 +653,7 @@ public class ConversionManager implements RF2SchemaConstants{
 			print ("Do you wish to create Lateralized Qualifying Relationships? [Y/N]: ");
 			String response = in.nextLine().trim();
 			if (response.toUpperCase().equals("Y")) {
-				print ("Please provide laterality text file location: ");
+				print ("Please provide matching laterality reference file location: ");
 				String latFileLPath = in.nextLine().trim();
 				File lateralityFile = new File(latFileLPath);
 				if (!lateralityFile.exists()) {
