@@ -154,7 +154,7 @@ AND EXISTS (
 );
 
 INSERT INTO rf21_subsetlist SELECT DISTINCT 
-	@RDATE || '1' AS SubsetID, 
+	@RDATE || '3' AS SubsetID, 
 	m.OriginalSubsetID AS OriginalSubsetID, 
 	SUBSTR(@RDATE,0,6)  AS SUBSETVERSION, 
 	m.SubsetName AS SUBSETNAME, 
