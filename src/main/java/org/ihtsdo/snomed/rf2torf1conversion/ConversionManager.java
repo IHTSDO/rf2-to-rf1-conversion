@@ -235,7 +235,7 @@ public class ConversionManager implements RF2SchemaConstants{
 			exportRF1Data(intExportMap, releaseDate, intReleaseDate, knownEditionMap.get(edition), exportArea);
 			exportRF1Data(extExportMap, releaseDate, releaseDate, knownEditionMap.get(edition), exportArea);
 
-			String filePath = getQualifyingRelationshipFilepath(/*releaseDate*/ "20160131", knownEditionMap.get(edition), exportArea);
+			String filePath = getQualifyingRelationshipFilepath(releaseDate, knownEditionMap.get(edition), exportArea);
 			if (includeAllQualifyingRelationships || includeLateralityIndicators) {
 				print("\nLoading Inferred Relationship Hierarchy for Qualifying Relationship computation...");
 				loadRelationshipHierarchy(intLoadingArea);
@@ -306,7 +306,7 @@ public class ConversionManager implements RF2SchemaConstants{
 						try{
 							db.runStatement(command.toString());
 						} catch (Exception e) {
-						    e.printStackTrace();
+							e.printStackTrace();
 						}
 						buff.setLength(0);
 					}
