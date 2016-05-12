@@ -135,15 +135,16 @@ FROM rf2_crefset s
 WHERE s.refsetid in (@USRefSet, @GBRefSet);
 
 INSERT INTO rf21_subsets 
-	SELECT m.refsetId AS SubsetId, 
+	SELECT l.SubsetID AS SubsetId, 
 	referencedComponentId AS MemberID, 
 	CASE WHEN s.refsetid =  @USRefSet THEN t.US_DESC_TYPE ELSE t.GB_DESC_TYPE END AS MemberStatus, 
 	null AS LinkedID ,
 	m.OriginalSubsetId AS SubsetOriginalId
-	FROM rf21_term t, rf2_crefset s  
+	FROM rf21_term t, rf21_subsetlist l, rf2_crefset s  
 	INNER JOIN rf2_subset2refset m 
 		ON s.refsetId = m.refsetId
 	WHERE s.refsetid in (@USRefSet, @GBRefSet)
 	AND s.referencedComponentId = t.descriptionid
+	AND m.OriginalSubsetId = l.SubsetOriginalId
 	and t.descriptionstatus = 0
 	AND s.active = 1;
