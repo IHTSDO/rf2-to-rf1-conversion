@@ -19,7 +19,7 @@ public class GlobalUtils {
 
 	public static boolean verbose;
 
-	private static long maxOperations = 399;
+	private static long maxOperations = 448;
 	private static long queriesRun = 0;
 	private static String BETA_PREFIX = "x";
 
