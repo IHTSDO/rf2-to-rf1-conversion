@@ -39,6 +39,7 @@ public class ConversionManager implements RF2SchemaConstants{
 	File intRf2Archive;
 	File extRf2Archive;
 	File unzipLocation = null;
+	File additionalFilesLocation = null;
 	DBManager db;
 	String intReleaseDate;
 	String extReleaseDate;
@@ -53,6 +54,7 @@ public class ConversionManager implements RF2SchemaConstants{
 	private String LNG = "LNG";
 	private String DATE = "DATE";
 	private String OUT = "OUT";
+	private String outputFolderTemplate = "SnomedCT_OUT_INT_DATE";
 	private String ANCIENT_HISTORY = "/sct1_ComponentHistory_Core_INT_20130731.txt";
 	private String QUALIFYING_RULES = "/qualifying_relationship_rules.json";
 	private String LATERALITY_FILE = "/LateralityReference20160131.txt";
@@ -143,7 +145,7 @@ public class ConversionManager implements RF2SchemaConstants{
 	public static Map<String, String>intExportMap = new HashMap<String, String>();
 	{
 		// The slashes will be replaced with the OS appropriate separator at export time
-		intExportMap.put("SnomedCT_OUT_INT_DATE/Terminology/Content/sct1_Concepts_Core_INT_DATE.txt",
+		intExportMap.put(outputFolderTemplate + "/Terminology/Content/sct1_Concepts_Core_INT_DATE.txt",
 				"select CONCEPTID, CONCEPTSTATUS, FULLYSPECIFIEDNAME, CTV3ID, SNOMEDID, ISPRIMITIVE from rf21_concept");
 		intExportMap
 				.put(RELATIONSHIP_FILENAME,
@@ -154,12 +156,12 @@ public class ConversionManager implements RF2SchemaConstants{
 	{
 		// The slashes will be replaced with the OS appropriate separator at export time
 		extExportMap
-				.put("SnomedCT_OUT_INT_DATE/Terminology/Content/sct1_Descriptions_LNG_INT_DATE.txt",
+				.put(outputFolderTemplate + "/Terminology/Content/sct1_Descriptions_LNG_INT_DATE.txt",
 						"select DESCRIPTIONID, DESCRIPTIONSTATUS, CONCEPTID, TERM, INITIALCAPITALSTATUS, DESC_TYPE as DESCRIPTIONTYPE, LANGUAGECODE from rf21_term");
-		extExportMap.put("SnomedCT_OUT_INT_DATE/Terminology/History/sct1_References_Core_INT_DATE.txt",
+		extExportMap.put(outputFolderTemplate + "/Terminology/History/sct1_References_Core_INT_DATE.txt",
 				"select COMPONENTID, REFERENCETYPE, REFERENCEDID from rf21_REFERENCE");
 		extExportMap
-				.put("SnomedCT_OUT_INT_DATE/Resources/StatedRelationships/res1_StatedRelationships_Core_INT_DATE.txt",
+				.put(outputFolderTemplate + "/Resources/StatedRelationships/res1_StatedRelationships_Core_INT_DATE.txt",
 						"select RELATIONSHIPID,CONCEPTID1,RELATIONSHIPTYPE,CONCEPTID2,CHARACTERISTICTYPE,REFINABILITY,RELATIONSHIPGROUP from rf21_stated_rel");
 	}
 
@@ -250,6 +252,10 @@ public class ConversionManager implements RF2SchemaConstants{
 			if (includeLateralityIndicators) {
 				print ("\nGenerating laterality qualifying relationships");
 				generateLateralityRelationships(filePath);
+			}
+			
+			if (additionalFilesLocation != null) {
+				includeAdditionalFiles(exportArea, releaseDate, knownEditionMap.get(edition));
 			}
 			
 			print("\nZipping archive");
@@ -424,10 +430,11 @@ public class ConversionManager implements RF2SchemaConstants{
 
 	private void init(String[] args, File dbLocation) throws RF1ConversionException {
 		if (args.length < 1) {
-			print("Usage: java ConversionManager [-v] [-h] [-i] [-q] [-u <unzip location>] <rf2 archive location> [<rf2 extension archive>]");
+			print("Usage: java ConversionManager [-v] [-h] [-i] [-q] [-a <additional files location>] [-u <unzip location>] <rf2 archive location> [<rf2 extension archive>]");
 			exit();
 		}
 		boolean isUnzipLocation = false;
+		boolean isAdditionalFilesLocation = false;
 
 		for (String thisArg : args) {
 			if (thisArg.equals("-v")) {
@@ -439,6 +446,8 @@ public class ConversionManager implements RF2SchemaConstants{
 				onlyHistory = true;
 			} else if (thisArg.equals("-u")) {
 				isUnzipLocation = true;
+			}  else if (thisArg.equals("-a")) {
+				isAdditionalFilesLocation = true;
 			} else if (thisArg.equals("-q")) {
 				includeAllQualifyingRelationships = true;
 			} else if (isUnzipLocation) {
@@ -447,6 +456,12 @@ public class ConversionManager implements RF2SchemaConstants{
 					throw new RF1ConversionException(thisArg + " is an invalid location to unzip archive to!");
 				}
 				isUnzipLocation = false;
+			} else if (isAdditionalFilesLocation) {
+				additionalFilesLocation = new File(thisArg);
+				if (!additionalFilesLocation.isDirectory()) {
+					throw new RF1ConversionException(thisArg + " is an invalid location to find additional files.");
+				}
+				isAdditionalFilesLocation = false;
 			} else if (intRf2Archive == null){
 				File possibleArchive = new File(thisArg);
 				if (possibleArchive.exists() && !possibleArchive.isDirectory() && possibleArchive.canRead()) {
@@ -671,5 +686,41 @@ public class ConversionManager implements RF2SchemaConstants{
 			}
 		}
 	}
+	
+
+	private void includeAdditionalFiles(File outputDirectory, String releaseDate, EditionConfig editionConfig){
+		Map<String, String> targetLocation = new HashMap<String, String>();
+		targetLocation.put(".pdf", "Documentation/");
+		targetLocation.put("KeyIndex_", "Resources/Indexes/");
+		targetLocation.put("Canonical", "Resources/Canonical Table/");
+		String rootPath = outputDirectory.getAbsolutePath() + File.separator + outputFolderTemplate  + File.separator;
+		rootPath = rootPath.replace(OUT, editionConfig.outputName)
+							.replace(DATE, releaseDate);
+
+		File[] directoryListing = additionalFilesLocation.listFiles();
+		if (directoryListing != null) {
+			for (File child : directoryListing) {
+				String childFilename = child.getName();
+				//Do we know to put this file in a particular location?
+				//otherwise path will remain the root path
+				for (String match : targetLocation.keySet()) {
+					if (childFilename.contains(match)) {
+						childFilename = targetLocation.get(match) + childFilename;
+						break;
+					}
+				}
+				//Ensure path exists for where file is being copied to
+				File copiedFile = new File (rootPath + childFilename);
+				copiedFile.getParentFile().mkdirs();
+				try {
+					FileUtils.copyFile(child, copiedFile);
+					print ("Copied additional file to " + copiedFile.getAbsolutePath());
+				} catch (IOException e) {
+					print ("Unable to copy additional file " + childFilename + " due to " + e.getMessage());
+				}
+			}
+		}
+	}
+
 
 }
