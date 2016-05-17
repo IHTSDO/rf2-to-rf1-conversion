@@ -7,6 +7,7 @@ SET @CS_CHANGE = 'CONCEPTSTATUS CHANGE';
 SET @PREFERRED = '900000000000548007';
 
 SET @DESC_INACT_RS = '900000000000490003';
+SET @CONCEPT_NOT_CURRENT = '900000000000495008';
 SET @DS_CHANGE = 'DESCRIPTIONSTATUS CHANGE';
 SET @DT_CHANGE = 'DESCRIPTIONTYPE CHANGE';
 SET @LC_CHANGE = 'LANGUAGECODE CHANGE';
@@ -19,7 +20,7 @@ SET @CONCEPT_NON_CURRENT = 8;
 SET @ADDED = 0;
 SET @NOT_SET = -1;
 
-SET @COMPONENT_OF_INTEREST = 2670239011;
+SET @COMPONENT_OF_INTEREST = 2923148011;
 
 -- PARALLEL_START;
 -- Insert all concept changes into history and we'll work out what changes where made
@@ -156,7 +157,7 @@ SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
 -- Where the row is inactivating, the change type becomes unknown ie 1 or perhaps the component is 
 -- now active in which case 0.
 -- But not when there exists a previous entry has the same status - is not a change in that case.
--- And not where there is a duplicate inactivation with the same active state
+-- And not where there is a duplicate inactivation with the same active state (except @CONCEPT_NOT_CURRENT)
 INSERT INTO rf21_COMPONENTHISTORY
 SELECT s.referencedComponentId, s.effectiveTime, 1, 
 CASE WHEN s.active = 1 THEN magicNumberFor(s.linkedComponentId) else 
@@ -198,7 +199,17 @@ AND NOT EXISTS (
 								WHERE s3.referencedComponentId = s.referencedComponentId
 								-- Not matching linkedComponentId because we want to include the situation 
 								-- where the reason changes.
-								AND s3.effectiveTime < s.effectiveTime));
+								AND s3.effectiveTime < s.effectiveTime))
+-- We have a case where the same inactivation exists as both active and inactive with the same effective time
+AND NOT EXISTS (
+	SELECT 1 from rf2_crefset_sv s4
+	WHERE s4.refsetId = s.refsetId
+	AND s4.referencedComponentId = s.referencedComponentId
+	AND s4.linkedComponentId = s.linkedComponentId
+	AND s4.effectiveTime = s.effectiveTime
+	AND s4.active = 0
+	AND s.active = 1
+);
 
 SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
 
