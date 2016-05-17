@@ -19,7 +19,7 @@ SET @CONCEPT_NON_CURRENT = 8;
 SET @ADDED = 0;
 SET @NOT_SET = -1;
 
-SET @COMPONENT_OF_INTEREST = 3011650017;
+SET @COMPONENT_OF_INTEREST = 2670239011;
 
 -- PARALLEL_START;
 -- Insert all concept changes into history and we'll work out what changes where made
@@ -423,16 +423,23 @@ DELETE from rf21_COMPONENTHISTORY
 WHERE status =  @NOT_SET;
 
 -- And where we have two changes, delete the less significant eg type 2
+-- Or where completely identical, the shorter of the two reasons
 DELETE from rf21_COMPONENTHISTORY ch
 WHERE EXISTS (
   SELECT 1 from rf21_COMPONENTHISTORY ch2
   WHERE ch.componentid = ch2.componentId
   AND ch.releaseversion = ch2.releaseVersion
   AND ( 
-	 ch.changeType > ch2.changeType
-	 OR (ch.changeType = ch2.changeType AND ch.status = 1 AND NOT ch2.status = 1)
-	 OR (ch.changeType = ch2.changeType AND ch.status = 0 AND NOT ch2.status = 0)
-	 )
+		(
+		ch.changeType > ch2.changeType
+		OR (ch.changeType = ch2.changeType AND ch.status = 1 AND NOT ch2.status = 1)
+		OR (ch.changeType = ch2.changeType AND ch.status = 0 AND NOT ch2.status = 0)
+		)
+	OR (
+		ch.changeType = ch2.changeType
+		AND length(ch.reason) < length(ch2.reason)
+		)
+	)
 );
 
 SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
