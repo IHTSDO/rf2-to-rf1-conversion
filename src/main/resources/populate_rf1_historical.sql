@@ -219,23 +219,26 @@ DELETE from rf21_COMPONENTHISTORY ch WHERE EXISTS
 -- and not meta data components
 INSERT INTO rf21_COMPONENTHISTORY
 SELECT DISTINCT s.referencedComponentId, s.effectiveTime, 2, 
--- Need to allow for status 8 when concept was inactive at that time
-descriptionStatusFor(SELECT t3.active from rf2_term_sv t3
-			WHERE t3.id = s.referencedComponentId
-			AND t3.effectiveTime = (select max(t4.effectiveTime) from rf2_term_sv t4
-									where t4.id = t3.id
-									and t4.effectiveTime <= s.effectiveTime)
-			, 
-			SELECT c.active FROM rf2_concept_sv c, rf2_term_sv t
-			WHERE t.id = s.referencedComponentId
-			AND t.effectiveTime = ( select max(t2.effectiveTime) from rf2_term_sv t2
-									where t2.id = t.id
-									and t2.effectiveTime <= s.effectiveTime)
-			AND c.id = t.conceptid
-			AND c.effectiveTime = ( select max(c2.effectiveTime) from rf2_concept_sv c2
-									where c2.id = c.id
-									and c2.effectiveTime <= s.effectiveTime)
-			) AS status, 
+-- Find the status for an attribute value active at that time, or just work from description status otherwise
+COALESCE ( 
+	SELECT magicNumberFor(s2.linkedComponentId)
+	FROM rf2_crefset_sv s2
+	WHERE s.referencedComponentId = s2.referencedComponentId
+	AND s2.refSetId = @DESC_INACT_RS
+	AND s2.effectiveTime = ( SELECT max(s3.effectiveTime) FROM rf2_crefset_sv s3
+							WHERE s3.referencedComponentId = s.referencedComponentId
+							AND s3.refsetId = s2.refSetId
+							AND s3.effectiveTime <= s.effectiveTime)
+	AND s2.active = 1
+	,
+	-- WHERE an inactivation indicator is not found, use the status of the 
+	-- most recent status for that descriptions
+		SELECT statusFor(t.active) FROM rf2_term_sv t
+		WHERE t.id = s.referencedComponentId
+		AND t.effectiveTime = ( SELECT max(t2.effectiveTime) FROM rf2_term_sv t2
+								WHERE t2.id = t.id
+								AND t2.effectiveTime <= s.effectiveTime)
+	) AS status,
 CASE WHEN EXISTS 
 	( SELECT 1 FROM rf2_crefset_sv s2
 		WHERE s2.refsetId = s.refsetId
