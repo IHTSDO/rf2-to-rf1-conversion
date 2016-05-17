@@ -19,7 +19,7 @@ SET @CONCEPT_NON_CURRENT = 8;
 SET @ADDED = 0;
 SET @NOT_SET = -1;
 
-SET @COMPONENT_OF_INTEREST = 3291619012;
+SET @COMPONENT_OF_INTEREST = 3011650017;
 
 -- PARALLEL_START;
 -- Insert all concept changes into history and we'll work out what changes where made
@@ -220,7 +220,12 @@ DELETE from rf21_COMPONENTHISTORY ch WHERE EXISTS
 INSERT INTO rf21_COMPONENTHISTORY
 SELECT DISTINCT s.referencedComponentId, s.effectiveTime, 2, 
 -- Need to allow for status 8 when concept was inactive at that time
-descriptionStatusFor(s.active, 
+descriptionStatusFor(SELECT t3.active from rf2_term_sv t3
+			WHERE t3.id = s.referencedComponentId
+			AND t3.effectiveTime = (select max(t4.effectiveTime) from rf2_term_sv t4
+									where t4.id = t3.id
+									and t4.effectiveTime <= s.effectiveTime)
+			, 
 			SELECT c.active FROM rf2_concept_sv c, rf2_term_sv t
 			WHERE t.id = s.referencedComponentId
 			AND t.effectiveTime = ( select max(t2.effectiveTime) from rf2_term_sv t2
