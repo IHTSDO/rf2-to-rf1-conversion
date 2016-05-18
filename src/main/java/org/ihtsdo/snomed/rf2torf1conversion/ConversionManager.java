@@ -522,11 +522,7 @@ public class ConversionManager implements RF2SchemaConstants{
 					.replace(OUT, editionConfig.outputName)
 					.replace(LNG, editionConfig.langCode);
 			
-			if (isBeta) {
-				//Beta prefix before the file shortname, but also for the leading directory
-				int lastSlash = fileName.lastIndexOf(File.separator) + 1;
-				fileName = BETA_PREFIX + fileName.substring(0,lastSlash) + BETA_PREFIX + fileName.substring(lastSlash);
-			}
+			fileName = modifyFilenameIfBeta(fileName);
 			String filePath = exportArea + File.separator + fileName;
 			
 			//If we're doing the history file, then we need to prepend the static
@@ -544,6 +540,15 @@ public class ConversionManager implements RF2SchemaConstants{
 		db.finishParallelProcessing();
 	}
 	
+
+	private String modifyFilenameIfBeta(String fileName) {
+		if (isBeta) {
+			//Beta prefix before the file shortname, but also for the leading directory
+			int lastSlash = fileName.lastIndexOf(File.separator) + 1;
+			fileName = BETA_PREFIX + fileName.substring(0,lastSlash) + BETA_PREFIX + fileName.substring(lastSlash);
+		}
+		return fileName;
+	}
 
 	private void loadRelationshipHierarchy(File intLoadingArea) throws RF1ConversionException {
 		String fileName = intLoadingArea.getAbsolutePath() + File.separator + "sct2_Relationship_Snapshot_INT_DATE.txt";
@@ -660,6 +665,7 @@ public class ConversionManager implements RF2SchemaConstants{
 				.replace(DATE, releaseDate)
 				.replace(OUT, editionConfig.outputName)
 				.replace(LNG, editionConfig.langCode);
+		fileName = modifyFilenameIfBeta(fileName);
 		String filePath = exportArea + File.separator + fileName;
 		File outputFile = new File(filePath);
 		try{
