@@ -24,7 +24,6 @@ AND s.active = 1;
 
 SET @HistoricalAttribute = '370125004';    /* MOVED TO */
 SET @Refset = '900000000000524003';	/* MOVED TO association reference set (foundation metadata concept) */
--- SET @RefType = 5; 
 INSERT INTO rf21_rel SELECT null, s.referencedComponentId, @HistoricalAttribute, linkedComponentID, 2,0,0,'RF2' 
 FROM rf2_cRefSet s 
 WHERE s.RefSetId = @Refset
@@ -52,7 +51,7 @@ AND rep.active = 1
 AND mvd.linkedComponentID is null;
 
 -- Apparently we only have references for "Replaced By" when the 'slot' in the IS A hierarchy
--- has been taken by a 'MOVED TO' relationship, so basicaly the complement of the previous 
+-- has been taken by a 'MOVED TO' relationship, so basically the complement of the previous 
 -- statement
 INSERT INTO rf21_reference SELECT s.referencedComponentId, @RefType, s.linkedComponentID 
 FROM rf2_cRefSet s, rf2_cRefSet mvd 
