@@ -3,11 +3,14 @@ set -e;
 
 memParams="-Xms3g -Xmx8g"
 
-while getopts ":Hdiqvu:a:" opt
+while getopts ":Hdbiqvu:a:" opt
 do
 	case $opt in
 		a)
 			additionalFilesLocation="-a $OPTARG"
+		;;
+		b)
+			betaFlag="-b"
 		;;
 		H)
 			historyFlag="-H"
@@ -41,7 +44,7 @@ do
 	esac
 done
 
-runTimeFlags="${verboseFlag} ${historyFlag} ${interactiveFlag} ${qualifyingFlag} ${ramDrive} ${additionalFilesLocation}"
+runTimeFlags="${verboseFlag} ${betaFlag} ${historyFlag} ${interactiveFlag} ${qualifyingFlag} ${ramDrive} ${additionalFilesLocation}"
 
 java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/Backup/xSnomedCT_RF2Release_INT_20160731.zip 
 #java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/Backup/SnomedCT_RF2Release_INT_20160131.zip

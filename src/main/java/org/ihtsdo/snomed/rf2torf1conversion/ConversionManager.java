@@ -46,6 +46,7 @@ public class ConversionManager implements RF2SchemaConstants{
 	boolean includeHistory = true; 
 	boolean includeAllQualifyingRelationships = false;
 	boolean includeLateralityIndicators = false;
+	boolean isBeta = false;
 	boolean onlyHistory = false;
 	boolean isExtension = false;
 	boolean goInteractive = false;
@@ -59,6 +60,7 @@ public class ConversionManager implements RF2SchemaConstants{
 	private String QUALIFYING_RULES = "/qualifying_relationship_rules.json";
 	private String LATERALITY_FILE = "/LateralityReference20160131.txt";
 	private String RELATIONSHIP_FILENAME = "SnomedCT_OUT_INT_DATE/Terminology/Content/sct1_Relationships_Core_INT_DATE.txt";
+	private String BETA_PREFIX = "x";
 	Set<File> filesLoaded = new HashSet<File>();
 	
 	enum Edition { INTERNATIONAL, SPANISH };
@@ -430,7 +432,8 @@ public class ConversionManager implements RF2SchemaConstants{
 
 	private void init(String[] args, File dbLocation) throws RF1ConversionException {
 		if (args.length < 1) {
-			print("Usage: java ConversionManager [-v] [-h] [-i] [-q] [-a <additional files location>] [-u <unzip location>] <rf2 archive location> [<rf2 extension archive>]");
+			print("Usage: java ConversionManager [-v] [-h] [-b] [-i] [-q] [-a <additional files location>] [-u <unzip location>] <rf2 archive location> [<rf2 extension archive>]");
+			print("  b - beta indicator, causes an x to be prepended to output filenames");
 			exit();
 		}
 		boolean isUnzipLocation = false;
@@ -444,7 +447,9 @@ public class ConversionManager implements RF2SchemaConstants{
 			} else if (thisArg.equals("-H")) {
 				includeHistory = true;
 				onlyHistory = true;
-			} else if (thisArg.equals("-u")) {
+			} else if (thisArg.equals("-b")) {
+				isBeta = true;
+			}else if (thisArg.equals("-u")) {
 				isUnzipLocation = true;
 			}  else if (thisArg.equals("-a")) {
 				isAdditionalFilesLocation = true;
@@ -516,6 +521,12 @@ public class ConversionManager implements RF2SchemaConstants{
 					.replace(DATE, fileReleaseDate)
 					.replace(OUT, editionConfig.outputName)
 					.replace(LNG, editionConfig.langCode);
+			
+			if (isBeta) {
+				//Beta prefix before the file shortname, but also for the leading directory
+				int lastSlash = fileName.lastIndexOf(File.separator) + 1;
+				fileName = BETA_PREFIX + fileName.substring(0,lastSlash) + BETA_PREFIX + fileName.substring(lastSlash);
+			}
 			String filePath = exportArea + File.separator + fileName;
 			
 			//If we're doing the history file, then we need to prepend the static
