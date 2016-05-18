@@ -20,7 +20,7 @@ SET @CONCEPT_NON_CURRENT = 8;
 SET @ADDED = 0;
 SET @NOT_SET = -1;
 
-SET @COMPONENT_OF_INTEREST = 2923148011;
+SET @COMPONENT_OF_INTEREST = 385356011;
 
 -- PARALLEL_START;
 -- Insert all concept changes into history and we'll work out what changes where made
@@ -373,6 +373,13 @@ reason = CASE WHEN EXISTS ( SELECT 1 FROM rf2_crefset_sv s2
 							WHERE s2.referencedComponentId = ch.componentId
 							AND s2.effectiveTime = ch.releaseVersion
 							AND s2.refsetId IN ( @USRefSet, @GBRefSet)
+							-- Check we haven't got a first time inactive entry lang entry
+							AND NOT ( s2.active = 0 AND NOT EXISTS (
+								SELECT 1 FROM rf2_crefset_sv s3
+								WHERE s3.referencedComponentId = ch.componentId
+								AND s3.refsetId = s2.refsetId
+								AND s3.effectiveTime < s2.effectiveTime
+								AND s3.active = 1 ))
 							)
 THEN @DT_ICS_CHANGE ELSE @ICS_CHANGE END
 WHERE ch.isConcept = FALSE
