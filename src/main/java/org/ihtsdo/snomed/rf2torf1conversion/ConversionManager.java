@@ -117,8 +117,8 @@ public class ConversionManager implements RF2SchemaConstants{
 		
 		//CTV3 and SNOMED RT Identifiers come from the International Edition
 		intfileToTable.put("der2_sRefset_SimpleMapEXTFull_INT_DATE.txt", "rf2_srefset_sv");
-		intfileToTable.put("der2_iissscRefset_ComplexEXTMapFull_INT_DATE.txt", "rf2_iissscrefset_sv");
-		intfileToTable.put("der2_iisssccRefset_ExtendedMapEXTFull_INT_DATE.txt", "rf2_iisssccrefset_sv");
+		//intfileToTable.put("der2_iissscRefset_ComplexEXTMapFull_INT_DATE.txt", "rf2_iissscrefset_sv");
+		//intfileToTable.put("der2_iisssccRefset_ExtendedMapEXTFull_INT_DATE.txt", "rf2_iisssccrefset_sv");
 
 	}
 	
@@ -136,8 +136,8 @@ public class ConversionManager implements RF2SchemaConstants{
 		extfileToTable.put("der2_cRefset_LanguageEXTFull-LNG_INT_DATE.txt", "rf2_crefset_sv");
 
 		extfileToTable.put("der2_sRefset_SimpleMapEXTFull_INT_DATE.txt", "rf2_srefset_sv");
-		extfileToTable.put("der2_iissscRefset_ComplexEXTMapFull_INT_DATE.txt", "rf2_iissscrefset_sv");
-		extfileToTable.put("der2_iisssccRefset_ExtendedMapEXTFull_INT_DATE.txt", "rf2_iisssccrefset_sv");
+		//extfileToTable.put("der2_iissscRefset_ComplexEXTMapFull_INT_DATE.txt", "rf2_iissscrefset_sv");
+		//extfileToTable.put("der2_iisssccRefset_ExtendedMapEXTFull_INT_DATE.txt", "rf2_iisssccrefset_sv");
 
 		extfileToTable.put("der2_cciRefset_RefsetDescriptorEXTFull_INT_DATE.txt", "rf2_ccirefset_sv");
 		extfileToTable.put("der2_ciRefset_DescriptionTypeEXTFull_INT_DATE.txt", "rf2_cirefset_sv");
