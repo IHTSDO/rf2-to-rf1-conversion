@@ -1,5 +1,6 @@
 tmp*
 SnomedCT_*
+xSnomedCT_*
 target
 go.sh
 *.txt
