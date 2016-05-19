@@ -710,7 +710,11 @@ public class ConversionManager implements RF2SchemaConstants{
 		targetLocation.put(".pdf", "Documentation/");
 		targetLocation.put("KeyIndex_", "Resources/Indexes/");
 		targetLocation.put("Canonical", "Resources/Canonical Table/");
-		String rootPath = outputDirectory.getAbsolutePath() + File.separator + outputFolderTemplate  + File.separator;
+		String rootPath = outputDirectory.getAbsolutePath() 
+						+ File.separator 
+						+ (isBeta?BETA_PREFIX:"")
+						+ outputFolderTemplate  
+						+ File.separator;
 		rootPath = rootPath.replace(OUT, editionConfig.outputName)
 							.replace(DATE, releaseDate);
 
