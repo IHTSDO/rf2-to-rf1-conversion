@@ -45,8 +45,9 @@ do
 done
 
 runTimeFlags="${verboseFlag} ${betaFlag} ${historyFlag} ${interactiveFlag} ${qualifyingFlag} ${ramDrive} ${additionalFilesLocation}"
+prevRF1="-p /Users/Peter/Backup/SnomedCT_RF1Release_INT_20150731.zip"
 
-java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/Backup/xSnomedCT_RF2Release_INT_20160731.zip 
-#java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/Backup/SnomedCT_RF2Release_INT_20160131.zip
+#java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/Backup/xSnomedCT_RF2Release_INT_20160731.zip 
+java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ${prevRF1} ~/Backup/SnomedCT_RF2Release_INT_20160131.zip
 #java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/Backup/xSnomedCT_RF2Release_INT_20160731.zip
 #java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/Backup/SnomedCT_RF2Release_INT_20160131.zip ~/Backup/SnomedCT_SpanishRelease-es_INT_20160430.zip

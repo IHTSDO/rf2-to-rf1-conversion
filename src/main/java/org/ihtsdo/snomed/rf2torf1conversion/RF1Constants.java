@@ -1,9 +1,17 @@
 package org.ihtsdo.snomed.rf2torf1conversion;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.zip.ZipInputStream;
 
-public class RF1Constants {
+import org.ihtsdo.snomed.rf2torf1conversion.pojo.RF1SchemaConstants;
+
+public class RF1Constants implements RF1SchemaConstants{
 
 	public static final String FSN = "900000000000003001";
 	public static final String DEFINITION = "900000000000550004";
@@ -15,7 +23,13 @@ public class RF1Constants {
 	public static final int NOT_REFINE = 0;
 	public static final int MAY_REFINE = 1;
 	public static final int MUST_REFINE = 2;
-
+	
+	private static final String DELIM = "_";
+	
+	//Map of triple+group to SCTID
+	public static Map<String, String> previousRelationships = new HashMap<String, String>();
+	private static BufferedReader availableRelationshipIds;
+	
 	private static Map<String, Byte> rf1Map = new HashMap<String, Byte>();
 	static {
 		rf1Map.put("900000000000441003", null); /* SNOMED CT Model Component (metadata) */
@@ -216,5 +230,60 @@ public class RF1Constants {
 			case ADDITIONAL: return 3;
 		}
 		return 9;  //Invalid value
+	}
+	
+	
+	public String lookupRelationshipId(String source, String type, String destination, String groupNum) throws RF1ConversionException, IOException {
+		String key = source + DELIM + type + DELIM + destination + DELIM + groupNum;
+		//Do we already have an SCTID for this key?
+		if (previousRelationships.containsKey(key)) {
+			return previousRelationships.get(key);
+		}
+		//Otherwise get the next one available and assign it so there's no danger of using it again
+		String nextSCTID = getNextAvailableRelationship();
+		previousRelationships.put(key, nextSCTID);
+		return nextSCTID;
+	}
+	
+	private static String getNextAvailableRelationship() throws RF1ConversionException, IOException {
+		boolean isAvailable = false;
+		String sctId = null;
+		while (!isAvailable) {
+			sctId = availableRelationshipIds.readLine();
+			if (sctId == null) {
+				throw new RF1ConversionException("Run out of available relationship SCTIDs.  Contact IHTSDO");
+			}
+			isAvailable = !previousRelationships.containsValue(sctId);
+		}
+		return sctId;
+	}
+
+	public static void intialiseAvailableRelationships(InputStream resource) {
+		availableRelationshipIds = new BufferedReader(new InputStreamReader(resource, StandardCharsets.UTF_8));
+	}
+	
+	/**
+	 * Stores the previous relationships in a map of triple+group to sctid, so they can 
+	 * be used for reconciliation or augmented with relationships from available_sctids_partition_02
+	 */
+	public static void loadPreviousRelationships(ZipInputStream zis) throws IOException {
+
+		String line;
+		boolean isFirstLine = true;
+		//We don't want to close this reader because we have more to get out of zis
+		BufferedReader br = new BufferedReader(new InputStreamReader(zis, StandardCharsets.UTF_8));
+		while ((line = br.readLine()) != null) {
+			if (isFirstLine) {
+				isFirstLine = false;
+				continue;
+			}
+			String[] lineItems = line.split(FIELD_DELIMITER);
+			String triplePlusGroup = lineItems[RF1_IDX_CONCEPTID1] + DELIM 
+									+ lineItems[RF1_IDX_RELATIONSHIPTYPE] + DELIM
+									+ lineItems[RF1_IDX_CONCEPTID2] + DELIM
+									+ lineItems[RF1_IDX_RELATIONSHIPGROUP];
+			previousRelationships.put(triplePlusGroup, lineItems[RF1_IDX_RELATIONSHIPID]);
+		}
+		
 	}
 }
