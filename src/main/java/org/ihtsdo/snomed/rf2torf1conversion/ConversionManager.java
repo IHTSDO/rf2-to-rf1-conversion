@@ -453,10 +453,6 @@ public class ConversionManager implements RF2SchemaConstants {
 			}
 			db.executeResource("populate_rf1_associations.sql");
 		}
-		
-		if (useRelationshipIds) {
-			db.executeResource("populate_relationship_Ids.sql");
-		}
 	}
 
 	private void init(String[] args, File dbLocation) throws RF1ConversionException {
@@ -684,7 +680,11 @@ public class ConversionManager implements RF2SchemaConstants {
 				for (Concept thisConcept : allConcepts) {
 					if (LateralityIndicator.hasLateralityIndicator(thisConcept.getSctId(), LateralityIndicator.Lattomidsag.YES)) {
 						if (!thisConcept.hasAttribute(LateralityAttribute)) {
-							String rf1Line = FIELD_DELIMITER + thisConcept.getSctId() + commonRF1;
+							String relId = RF1Constants.lookupRelationshipId(thisConcept.getSctId().toString(),
+									LATERALITY_ATTRIB,
+									SIDE_VALUE,
+									UNGROUPED);
+							String rf1Line = relId + FIELD_DELIMITER + thisConcept.getSctId() + commonRF1;
 							out.println(rf1Line);
 						}
 					}
@@ -796,7 +796,7 @@ public class ConversionManager implements RF2SchemaConstants {
 							updateSubsetIds(zis, config);
 						} else if (fileName.contains("sct1_Relationships")) {
 							//We need to use static methods here so that H2 can access as functions.
-							print ("Loading previous RF1 relationships");
+							print ("\nLoading previous RF1 relationships");
 							RF1Constants.loadPreviousRelationships(zis);
 						}
 					}

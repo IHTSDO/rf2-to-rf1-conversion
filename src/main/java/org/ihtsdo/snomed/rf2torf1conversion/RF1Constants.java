@@ -233,7 +233,7 @@ public class RF1Constants implements RF1SchemaConstants{
 	}
 	
 	
-	public String lookupRelationshipId(String source, String type, String destination, String groupNum) throws RF1ConversionException, IOException {
+	public static String lookupRelationshipId(String source, String type, String destination, String groupNum) throws RF1ConversionException, IOException {
 		String key = source + DELIM + type + DELIM + destination + DELIM + groupNum;
 		//Do we already have an SCTID for this key?
 		if (previousRelationships.containsKey(key)) {
