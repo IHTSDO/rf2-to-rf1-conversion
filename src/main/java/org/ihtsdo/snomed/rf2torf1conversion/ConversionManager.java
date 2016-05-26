@@ -32,6 +32,7 @@ import org.ihtsdo.snomed.rf2torf1conversion.pojo.ConceptDeserializer;
 import org.ihtsdo.snomed.rf2torf1conversion.pojo.LateralityIndicator;
 import org.ihtsdo.snomed.rf2torf1conversion.pojo.QualifyingRelationshipAttribute;
 import org.ihtsdo.snomed.rf2torf1conversion.pojo.QualifyingRelationshipRule;
+import org.ihtsdo.snomed.rf2torf1conversion.pojo.RF1SchemaConstants;
 import org.ihtsdo.snomed.rf2torf1conversion.pojo.RF2SchemaConstants;
 
 import com.google.common.base.Stopwatch;
@@ -40,7 +41,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
-public class ConversionManager implements RF2SchemaConstants {
+public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants {
 
 	File intRf2Archive;
 	File extRf2Archive;
@@ -73,6 +74,7 @@ public class ConversionManager implements RF2SchemaConstants {
 	Set<File> filesLoaded = new HashSet<File>();
 	private Long[] subsetIds;
 	private Long maxPreviousSubsetId = null;
+	private int  previousSubsetVersion = 29;  //Taken from 20160131 RF1 International Release
 	
 	enum Edition { INTERNATIONAL, SPANISH };
 	
@@ -208,9 +210,10 @@ public class ConversionManager implements RF2SchemaConstants {
 				determineEdition(extloadingArea, null, extReleaseDate);	
 				isExtension = true;
 			}
-			String releaseDate = isExtension ? extReleaseDate : intReleaseDate;			
+			String releaseDate = isExtension ? extReleaseDate : intReleaseDate;
+			int releaseIndex = calculateReleaseIndex(releaseDate);
 			EditionConfig config = knownEditionMap.get(edition);
-			
+			int newSubsetVersion = 0;
 			if (previousRF1Location != null) {
 				useRelationshipIds = true;
 				//This will allow us to set up SubsetIds (using available_sctids_partition_03)
@@ -220,11 +223,13 @@ public class ConversionManager implements RF2SchemaConstants {
 				//Initialise a set of available SCTIDS
 				InputStream availableRelIds = ConversionManager.class.getResourceAsStream(AVAILABLE_RELATIONSHIP_IDS);
 				RF1Constants.intialiseAvailableRelationships(availableRelIds);
+				newSubsetVersion = previousSubsetVersion + 1;
 			} else {
-				useDeterministicSubsetIds(releaseDate, config);
+				useDeterministicSubsetIds(releaseIndex, config);
+				newSubsetVersion = previousSubsetVersion + releaseIndex;
 			}
 			db.runStatement("SET @useRelationshipIds = " + useRelationshipIds);
-			setSubsetIds();
+			setSubsetIds(newSubsetVersion);
 			
 			long maxOperations = getMaxOperations();
 			if (onlyHistory) {
@@ -813,6 +818,7 @@ public class ConversionManager implements RF2SchemaConstants {
 	}
 	
 	private void updateSubsetIds(ZipInputStream zis, EditionConfig config) throws NumberFormatException, IOException {
+		//This function will also pick up and set the previous subset version
 		Long subsetId = loadSubsetsFile(zis);
 		//Do we need to recover a new set of subsetIds?
 		if (maxPreviousSubsetId == null || subsetId > maxPreviousSubsetId) {
@@ -850,27 +856,56 @@ public class ConversionManager implements RF2SchemaConstants {
 			}
 			String[] lineItems = line.split(FIELD_DELIMITER);
 			//SubsetId is the first column
-			Long thisSubsetId = Long.parseLong(lineItems[0]);
+			Long thisSubsetId = Long.parseLong(lineItems[RF1_IDX_SUBSETID]);
 			if (maxSubsetIdInFile == null || thisSubsetId > maxSubsetIdInFile) {
 				maxSubsetIdInFile = thisSubsetId;
+			}
+			//SubsetVersion is the 3rd
+			int thisSubsetVersion = Integer.parseInt(lineItems[RF1_IDX_SUBSETVERSION]);
+			if (thisSubsetVersion > previousSubsetVersion) {
+				previousSubsetVersion = thisSubsetVersion;
 			}
 		}
 		return maxSubsetIdInFile;
 	}
 
-	private void useDeterministicSubsetIds(String releaseDate, EditionConfig config) {
-		subsetIds = new Long[config.dialects.length];
-		for (int i=0; i < subsetIds.length ; i++) {
-			subsetIds[i] = Long.parseLong(releaseDate + i);
+	private void useDeterministicSubsetIds(int releaseIndex, EditionConfig config) throws RF1ConversionException {
+		try {
+			InputStream is = ConversionManager.class.getResourceAsStream(AVAILABLE_SUBSET_IDS);
+			try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))){
+				String line;
+				int subsetIdsSet = 0;
+				subsetIds = new Long[config.dialects.length];
+				int filePos = 0;
+				while ((line = br.readLine()) != null && subsetIdsSet < config.dialects.length) {
+					filePos++;
+					Long thisAvailableSubsetId = Long.parseLong(line.trim());
+					if (filePos >= releaseIndex) {
+						debug ("Obtaining new Subset Ids from resource file");
+						subsetIds[subsetIdsSet] = thisAvailableSubsetId;
+						subsetIdsSet++;
+					}
+				}
+			}
+		} catch (IOException e) {
+			throw new RF1ConversionException("Unable to determine new subset Ids",e);
 		}
-		
 	}
 	
-	private void setSubsetIds() {
+	private void setSubsetIds(int newSubsetVersion) {
 		for (int i=0 ; i<subsetIds.length; i++) {
 			db.runStatement("SET @SUBSETID_" + (i+1) + " = " + subsetIds[i]);
 		}
-		
+		db.runStatement("SET @SUBSET_VERSION = " + newSubsetVersion);
+	}
+
+	int calculateReleaseIndex(String releaseDate) {
+		//returns a number that can be used when a previous release is not available
+		//to give an incrementing variable that we can use to move through the SCTID 02 & 03 files
+		int year = Integer.parseInt(releaseDate.substring(0, 4));
+		int month = Integer.parseInt(releaseDate.substring(4,6));
+		int index = ((year - 2016)*10) + month;
+		return index;
 	}
 	
 }

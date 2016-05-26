@@ -277,7 +277,7 @@ public class RF1Constants implements RF1SchemaConstants{
 				isFirstLine = false;
 				continue;
 			}
-			String[] lineItems = line.split(FIELD_DELIMITER);
+			String[] lineItems = line.split(RF1_FIELD_DELIMITER);
 			String triplePlusGroup = lineItems[RF1_IDX_CONCEPTID1] + DELIM 
 									+ lineItems[RF1_IDX_RELATIONSHIPTYPE] + DELIM
 									+ lineItems[RF1_IDX_CONCEPTID2] + DELIM
