@@ -99,6 +99,13 @@ WHERE conceptid1 IN (
 	SELECT r.conceptid1 FROM rf21_rel r LEFT JOIN rf21_concept c
 	ON r.conceptid1 = c.conceptid
 	WHERE c.conceptid is null );
+	
+-- Also where the destination is RF2 specific
+DELETE from rf21_rel
+WHERE conceptid2 IN (
+	SELECT r.conceptid2 FROM rf21_rel r LEFT JOIN rf21_concept c
+	ON r.conceptid2 = c.conceptid
+	WHERE c.conceptid is null );
 
 SET @InactiveParent = '363661006'; /* Reason not stated */
 INSERT INTO rf21_rel SELECT  null, c.CONCEPTID, @ISA, @InactiveParent, 0,0,0,c.SOURCE FROM rf21_concept c WHERE c.CONCEPTSTATUS = 1;
