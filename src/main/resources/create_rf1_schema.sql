@@ -3,7 +3,6 @@ CREATE ALIAS magicNumberFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constan
 
 CREATE ALIAS magicNumberDebug FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.getMagicNumberDebug";
 
-
 CREATE ALIAS moduleSourceFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.getModuleSource";
 
 CREATE ALIAS statusFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.translateActive";
@@ -17,6 +16,8 @@ CREATE ALIAS capitalStatusFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Const
 CREATE ALIAS characteristicFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.translateCharacteristic";
 
 CREATE ALIAS refinabilityFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.translateRefinability";
+
+CREATE ALIAS relationshipIdFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.lookupRelationshipId";
 
 DROP TABLE IF EXISTS rf21_CONCEPT;
 CREATE TABLE rf21_CONCEPT (
