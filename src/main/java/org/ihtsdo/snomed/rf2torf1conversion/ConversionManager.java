@@ -685,10 +685,13 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 				for (Concept thisConcept : allConcepts) {
 					if (LateralityIndicator.hasLateralityIndicator(thisConcept.getSctId(), LateralityIndicator.Lattomidsag.YES)) {
 						if (!thisConcept.hasAttribute(LateralityAttribute)) {
-							String relId = RF1Constants.lookupRelationshipId(thisConcept.getSctId().toString(),
+							String relId = "";  //Default is to blank relationship ids
+							if (useRelationshipIds) {
+								relId = RF1Constants.lookupRelationshipId(thisConcept.getSctId().toString(),
 									LATERALITY_ATTRIB,
 									SIDE_VALUE,
 									UNGROUPED);
+							}
 							String rf1Line = relId + FIELD_DELIMITER + thisConcept.getSctId() + commonRF1;
 							out.println(rf1Line);
 						}
