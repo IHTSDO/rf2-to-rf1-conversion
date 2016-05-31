@@ -86,7 +86,6 @@ SET t.DESCRIPTIONSTATUS = COALESCE (
 	and s.refSetId = @DInactivationRefSet
 	AND s.active = 1,t.descriptionstatus);
 
-
 -- Where the concept has limited status (6), the description should too
 UPDATE rf21_term t
 SET t.DESCRIPTIONSTATUS = 6
@@ -96,9 +95,19 @@ WHERE EXISTS (
 	AND c.conceptstatus = 6 )
 AND t.DESCRIPTIONSTATUS = 8;
 
+-- Where the description has a REFERS_TO attribute, the status should be 7 - Inappropriate
+SET @RefersToRefset = '900000000000531004';
+UPDATE rf21_term t
+SET t.DESCRIPTIONSTATUS = 7
+WHERE EXISTS (
+	SELECT 1 FROM rf2_crefset s
+	where t.descriptionid = s.referencedComponentId
+	and s.refsetId = @RefersToRefset
+	and s.active = 1)
+AND t.DESCRIPTIONSTATUS = 1;
+
 -- Where the description is acceptable in one dialect and preferred in the other, set the 
 -- common description type to 0 - unspecified;
-
 UPDATE rf21_term t
 SET t.DESC_TYPE = 0
 WHERE EXISTS (
@@ -112,9 +121,9 @@ WHERE EXISTS (
 AND NOT t.US_DESC_TYPE = 3;
 
 INSERT INTO rf21_subsetlist SELECT DISTINCT 
-	@RDATE || CASE WHEN m.refsetId = 900000000000508004 THEN '2' ELSE '1' END AS SubsetID, 
+	CASE WHEN m.refsetId = 900000000000508004 THEN @SUBSETID_2 ELSE @SUBSETID_1 END AS SubsetID, 
 	m.OriginalSubsetID AS OriginalSubsetID, 
-	SUBSTR(@RDATE,0,6)  AS SUBSETVERSION, 
+	@SUBSET_VERSION AS SUBSETVERSION, 
 	m.SubsetName AS SUBSETNAME, 
 	CASE WHEN LEFT(RIGHT(s.refsetId,3),1) = 1 THEN 3 ELSE 1 END AS SUBSETTYPE, 
 	CASE WHEN m.refsetId = 900000000000508004 THEN 'en-GB' ELSE 'en-US' END AS LANGUAGECODE, 
@@ -126,15 +135,16 @@ FROM rf2_crefset s
 WHERE s.refsetid in (@USRefSet, @GBRefSet);
 
 INSERT INTO rf21_subsets 
-	SELECT m.refsetId AS SubsetId, 
+	SELECT l.SubsetID AS SubsetId, 
 	referencedComponentId AS MemberID, 
 	CASE WHEN s.refsetid =  @USRefSet THEN t.US_DESC_TYPE ELSE t.GB_DESC_TYPE END AS MemberStatus, 
 	null AS LinkedID ,
 	m.OriginalSubsetId AS SubsetOriginalId
-	FROM rf21_term t, rf2_crefset s  
+	FROM rf21_term t, rf21_subsetlist l, rf2_crefset s  
 	INNER JOIN rf2_subset2refset m 
 		ON s.refsetId = m.refsetId
 	WHERE s.refsetid in (@USRefSet, @GBRefSet)
 	AND s.referencedComponentId = t.descriptionid
+	AND m.OriginalSubsetId = l.SubsetOriginalId
 	and t.descriptionstatus = 0
 	AND s.active = 1;

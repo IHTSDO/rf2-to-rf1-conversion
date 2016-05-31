@@ -109,9 +109,6 @@ SET t.DESCRIPTIONSTATUS = COALESCE (
 	and s.refSetId = @DInactivationRefSet
 	AND s.active = 1,t.descriptionstatus)
 WHERE t.descriptionstatus <> 0;
-	
-SELECT * from rf21_concept where conceptid = 68114006;
-SELECT * from rf21_term where conceptid = 68114006;
 
 -- Where the concept has limited status (6), and the description is otherwise active,
 -- the description should also have status 6.
@@ -122,9 +119,6 @@ WHERE EXISTS (
 	WHERE t.conceptid = c.conceptid
 	AND c.conceptstatus = 6 )
 and t.descriptionstatus = 0;
-	
-SELECT * from rf21_concept where conceptid = 68114006;
-SELECT * from rf21_term where conceptid = 68114006;
 
 -- Where the concept is non current (ie status 1, 2, 3, 4, 5, or 10) then
 -- the description takes status 8
@@ -160,9 +154,9 @@ AND EXISTS (
 );
 
 INSERT INTO rf21_subsetlist SELECT DISTINCT 
-	@RDATE || '1' AS SubsetID, 
+	@SUBSETID_1 AS SubsetID, 
 	m.OriginalSubsetID AS OriginalSubsetID, 
-	SUBSTR(@RDATE,0,6)  AS SUBSETVERSION, 
+	@SUBSET_VERSION  AS SUBSETVERSION, 
 	m.SubsetName AS SUBSETNAME, 
 	1 AS SUBSETTYPE, 
 	@langCode AS LANGUAGECODE, 

@@ -1,34 +1,89 @@
+SET @MODEL_MODULE = '900000000000012004';
 SET @FSN = '900000000000003001';
--- SET @HISTORY_START = 20110131;
 SET @CONCEPT_INACT_RS = 900000000000489007;
-SET @S_CHANGE = 'STATUS CHANGE';
+SET @USRefSet = '900000000000509007';
+SET @GBRefSet = '900000000000508004';
+SET @CS_CHANGE = 'CONCEPTSTATUS CHANGE';
+SET @PREFERRED = '900000000000548007';
 
-SET @DESC_INACT_RS = 900000000000490003;
+SET @DESC_INACT_RS = '900000000000490003';
+SET @CONCEPT_NOT_CURRENT = '900000000000495008';
 SET @DS_CHANGE = 'DESCRIPTIONSTATUS CHANGE';
+SET @DT_CHANGE = 'DESCRIPTIONTYPE CHANGE';
+SET @LC_CHANGE = 'LANGUAGECODE CHANGE';
+SET @DT_LC_CHANGE = 'DESCRIPTIONTYPE CHANGE, LANGUAGECODE CHANGE';
 SET @ICS_CHANGE = 'INITIALCAPITALSTATUS CHANGE';
+SET @DT_ICS_CHANGE = 'DESCRIPTIONTYPE CHANGE, INITIALCAPITALSTATUS CHANGE';
+SET @FSN_CHANGE = 'FULLYSPECIFIEDNAME CHANGE';
+SET @HISTORY_START = 20140131;
+SET @CONCEPT_NON_CURRENT = 8;
+SET @ADDED = 0;
+SET @NOT_SET = -1;
 
 -- PARALLEL_START;
 -- Insert all concept changes into history and we'll work out what changes where made
 -- in a subsequent pass.
+-- Filter out some model component module concepts - need to do this using text as attributes are OK
 INSERT INTO rf21_COMPONENTHISTORY
-SELECT c.id, c.effectiveTime, -1, -1, '', TRUE, 
+SELECT c.id, c.effectiveTime,  @NOT_SET,  @NOT_SET, '', TRUE, 
 (	-- Work out the most recent change preceeding this change
 	SELECT max(c2.effectiveTime) from rf2_concept_sv c2
  	WHERE c.id = c2.id
 	AND c2.effectiveTime < c.effectiveTime
+	AND c.effectiveTime >= @HISTORY_START
 )
-FROM rf2_concept_sv c;
+FROM rf2_concept_sv c
+WHERE NOT EXISTS ( SELECT 1 from rf2_term_sv t
+						WHERE t.typeid = @FSN
+						AND t.conceptid = c.id
+						AND t.term like '%metadata concept)' )
+AND c.effectiveTime >= @HISTORY_START;
 
+-- Where the concept entry in the history has no previous entry in the history, 
+-- then we'll mark the status as 0 - Created.   
+-- Watch out for components that are created in an inactive state however.
+UPDATE rf21_COMPONENTHISTORY ch 
+SET CHANGETYPE = @ADDED,
+STATUS = ( select statusFor(c.active) from rf2_concept_sv c
+			where c.id = ch.componentid
+			and c.effectiveTime = ch.releaseversion )
+WHERE isConcept = true
+AND NOT EXISTS (
+	SELECT 1 from rf2_concept_sv cf
+	WHERE cf.id = ch.componentid
+	AND cf.effectiveTime < ch.releaseVersion
+);
+
+-- Add all Description entries from the full file - creations, activations and inactivations
 INSERT INTO rf21_COMPONENTHISTORY
-SELECT t.id, t.effectiveTime, -1, -1, '', FALSE, 
+SELECT t.id, t.effectiveTime,  @NOT_SET,  @NOT_SET, '', FALSE, 
 (	-- Work out the most recent change preceeding this change
 	SELECT max(t2.effectiveTime) from rf2_term_sv t2
 	WHERE t.id = t2.id
 	AND t2.effectiveTime < t.effectiveTime
+	AND t.effectiveTime >= @HISTORY_START
 )
-FROM rf2_term_sv t;
+FROM rf2_term_sv t
+WHERE NOT EXISTS ( SELECT 1 from rf2_term_sv t2
+						WHERE t2.typeid = @FSN
+						AND t2.conceptid = t.conceptid
+						AND t2.term like '%metadata concept)' )
+AND t.effectiveTime >= @HISTORY_START;
 
--- PARALLEL_END;
+-- Where the term entry in the history has no previous entry in the history, 
+-- then we'll mark the status as 0 - Created.
+-- Watch out for components that are created in an inactive state however.
+UPDATE rf21_COMPONENTHISTORY ch 
+SET CHANGETYPE = @ADDED,
+STATUS = ( select statusFor(t.active) from rf2_term_sv t
+			where t.id = ch.componentid
+			and t.effectiveTime = ch.releaseversion )
+WHERE isConcept = false
+AND NOT EXISTS (
+	SELECT 1 from rf2_term_sv tf
+	WHERE tf.id = ch.componentid
+	AND tf.effectiveTime < ch.releaseVersion
+);
 
 CREATE INDEX idx_comphist_id ON rf21_COMPONENTHISTORY(componentId);
 CREATE INDEX idx_comphist_et ON rf21_COMPONENTHISTORY(releaseVersion);
@@ -36,50 +91,306 @@ CREATE INDEX idx_comphist_status ON rf21_COMPONENTHISTORY(status);
 CREATE INDEX idx_comphist_prev ON rf21_COMPONENTHISTORY(previousVersion);
 CREATE INDEX idx_comphist_c ON rf21_COMPONENTHISTORY(isConcept);
 
--- PARALLEL_START;
--- Update the first entry for a component to be the "Added" row
+-- Where the term has been created and there is immediate inactivation indicator
 UPDATE rf21_COMPONENTHISTORY ch
-SET CHANGETYPE=0,
-STATUS = 0
-WHERE releaseversion = ( 
-	SELECT min (releaseversion) from rf21_COMPONENTHISTORY ch2
-	WHERE ch.componentid = ch2.componentid
+-- Either find an inactivation indicator, or work the status out from the description and concept status
+SET STATUS = SELECT magicNumberFor(s.linkedComponentId)
+						FROM rf2_crefset_sv s
+						WHERE s.refsetId = @DESC_INACT_RS
+						AND s.active = 1
+						AND s.referencedComponentId = ch.componentId
+						AND s.effectiveTime = ch.releaseVersion
+WHERE isConcept = false
+AND changeType = @ADDED
+AND EXISTS (
+	SELECT 1 FROM rf2_crefset_sv s
+	WHERE s.refsetId = @DESC_INACT_RS
+	AND s.active = 1
+	AND s.referencedComponentId = ch.componentId
+	AND s.effectiveTime = ch.releaseVersion);
+
+-- CONCEPT INACTIVATION
+-- Where there is no other change, but the inactivation indicator
+-- is modified, add a new row.
+-- Where the row is inactivating, the change type becomes unknown ie 1 or perhaps the component is 
+-- now active in which case 0.
+-- But not when there exists a previous entry has the same status - is not a change in that case.
+INSERT INTO rf21_COMPONENTHISTORY
+SELECT s.referencedComponentId, s.effectiveTime, 1, 
+CASE WHEN s.active = 1 THEN magicNumberFor(s.linkedComponentId) ELSE
+	-- Find the most recent active flag for the description
+	select statusFor(c.active) from rf2_concept_sv c
+	where c.id = s.referencedComponentId
+	and c.effectiveTime = ( select max(c2.effectiveTime) 
+							from rf2_concept_sv c2
+							where c2.id = c.id
+							and c2.effectiveTime <= s.effectiveTime)
+ END AS status,  
+@CS_CHANGE AS reason, 
+true AS isConcept,
+null
+FROM rf2_crefset_sv s
+WHERE s.refsetId = @CONCEPT_INACT_RS
+AND s.effectiveTime >= @HISTORY_START
+AND NOT EXISTS (
+	SELECT 1 from rf21_COMPONENTHISTORY ch
+	where s.referencedComponentId = ch.componentId
+	-- Find the next previous or current entry
+	and ch.releaseVersion = ( SELECT MAX(ch2.releaseVersion) 
+								FROM rf21_COMPONENTHISTORY ch2 
+								WHERE ch.componentId = ch2.componentId
+								AND ch2.releaseVersion <= s.effectiveTime )
+	and ch.status = magicNumberFor(s.linkedComponentId)
 );
 
--- Where a row was added and already had an inactivation reason 
--- on that date, apply the appropriate status.  I think this is faster
--- to do twice for each refset
--- TODO Try only doing this where an inactivation reason exists in snapshot
--- to reduce the number of calls to magicNumberFor
-UPDATE rf21_COMPONENTHISTORY ch
-SET STATUS = COALESCE (
-	(select magicNumberFor(s.linkedComponentId)
-	from rf2_crefset_sv s
+-- DESCRIPTION INACTIVATION
+-- Where there is no other change, but the inactivation indicator
+-- is modified, add a new row.
+-- Where the row is inactivating, the change type becomes unknown ie 1 or perhaps the component is 
+-- now active in which case 0.
+-- But not when there exists a previous entry has the same status - is not a change in that case.
+-- And not where there is a duplicate inactivation with the same active state (except @CONCEPT_NOT_CURRENT)
+INSERT INTO rf21_COMPONENTHISTORY
+SELECT s.referencedComponentId, s.effectiveTime, 1, 
+CASE WHEN s.active = 1 THEN magicNumberFor(s.linkedComponentId) else 
+ (  -- Find the most recent active flag for the description and concept
+ 	select descriptionStatusFor(d.active, c.active) from rf2_term_sv d, rf2_concept_sv c
+ 	where d.id = s.referencedComponentId
+ 	and c.id = d.conceptId
+ 	and d.effectiveTime = ( select max(d2.effectiveTime) from rf2_term_sv d2
+ 							where d2.id = d.id
+ 							and d2.effectiveTime <= s.effectiveTime)
+ 	and c.effectiveTime = (select max(c2.effectiveTime) from rf2_concept_sv c2
+ 							where c2.id = c.id
+ 							and c2.effectiveTime <= s.effectiveTime)
+ ) END AS status, 
+@DS_CHANGE AS reason, 
+ false isConcept,
+null
+FROM rf2_crefset_sv s
+WHERE s.refsetId = @DESC_INACT_RS
+AND s.effectiveTime >= @HISTORY_START
+AND NOT EXISTS (
+	SELECT 1 from rf21_COMPONENTHISTORY ch
 	where s.referencedComponentId = ch.componentId
-	and s.refSetId = @CONCEPT_INACT_RS
-	AND s.effectiveTime = ch.releaseVersion
-	AND s.active = 1),0) 
-WHERE changeType = 0
-AND isConcept = true;
+	-- Find the next previous or current entry
+	and ch.releaseVersion = ( SELECT MAX(ch2.releaseVersion) 
+								FROM rf21_COMPONENTHISTORY ch2 
+								WHERE ch.componentId = ch2.componentId
+								AND ch2.releaseVersion <= s.effectiveTime )
+	and ch.status = magicNumberFor(s.linkedComponentId)
+)
+AND NOT EXISTS (
+	-- ensure previous duplicate inactivation indicator does not exist
+	SELECT 1 from rf2_crefset_sv s2
+	WHERE s2.refsetId = s.refsetId
+	AND s2.referencedComponentId = s.referencedComponentId
+	AND s2.linkedComponentId = s.linkedComponentId
+	AND s2.active = s.active
+	AND s2.effectiveTime = ( SELECT max(s3.effectiveTime) FROM rf2_crefset_sv s3
+								WHERE s3.referencedComponentId = s.referencedComponentId
+								-- Not matching linkedComponentId because we want to include the situation 
+								-- where the reason changes.
+								AND s3.effectiveTime < s.effectiveTime))
+-- We have a case where the same inactivation exists as both active and inactive with the same effective time
+AND NOT EXISTS (
+	SELECT 1 from rf2_crefset_sv s4
+	WHERE s4.refsetId = s.refsetId
+	AND s4.referencedComponentId = s.referencedComponentId
+	AND s4.linkedComponentId = s.linkedComponentId
+	AND s4.effectiveTime = s.effectiveTime
+	AND s4.active = 0
+	AND s.active = 1
+);
 
+-- Now if we have rows that do not have a status set that are duplicates with rows that do
+-- then now would be good time to delete those before we can't tell between them.
+DELETE from rf21_COMPONENTHISTORY ch WHERE EXISTS
+( SELECT 1 from rf21_COMPONENTHISTORY ch2
+  WHERE ch.componentid = ch2.componentid
+  AND ch.releaseVersion = ch2.releaseVersion
+  AND ch.status = @NOT_SET and NOT ch2.status = @NOT_SET);
+
+-- Language Refset Processing
+-- Where there's been a change in the language acceptability, capture that too.
+-- A change from PREF to ACCEPT results in DT_CHANGE
+-- Just becoming acceptable for the first time is a LC_CHANGE
+-- A first time change in either lang refsets generates DT_LC_CHANGE
+-- unless it was previously Preferred in the other language (seriously?)
+-- and not meta data components
+INSERT INTO rf21_COMPONENTHISTORY
+SELECT DISTINCT s.referencedComponentId, s.effectiveTime, 2, 
+-- Find the status for an attribute value active at that time, or just work from description status otherwise
+COALESCE ( 
+	SELECT magicNumberFor(s2.linkedComponentId)
+	FROM rf2_crefset_sv s2
+	WHERE s.referencedComponentId = s2.referencedComponentId
+	AND s2.refSetId = @DESC_INACT_RS
+	AND s2.effectiveTime = ( SELECT max(s3.effectiveTime) FROM rf2_crefset_sv s3
+							WHERE s3.referencedComponentId = s.referencedComponentId
+							AND s3.refsetId = s2.refSetId
+							AND s3.effectiveTime <= s.effectiveTime)
+	AND s2.active = 1
+	,
+	-- WHERE an inactivation indicator is not found, use the status of the 
+	-- most recent status for that descriptions
+		SELECT statusFor(t.active) FROM rf2_term_sv t
+		WHERE t.id = s.referencedComponentId
+		AND t.effectiveTime = ( SELECT max(t2.effectiveTime) FROM rf2_term_sv t2
+								WHERE t2.id = t.id
+								AND t2.effectiveTime <= s.effectiveTime)
+	) AS status,
+CASE WHEN EXISTS 
+	( SELECT 1 FROM rf2_crefset_sv s2
+		WHERE s2.refsetId = s.refsetId
+		AND s2.referencedComponentId = s.referencedComponentId
+		AND NOT s2.linkedComponentId = s.linkedComponentId
+		AND s2.effectiveTime = ( SELECT MAX(s3.effectiveTime) FROM rf2_crefset_sv s3
+								where s3.refsetId = s.refsetId
+								AND NOT s3.linkedComponentId = s.linkedComponentId
+								and s3.referencedComponentId = s.referencedComponentId
+								and s3.effectiveTime < s.effectiveTime)
+	) THEN @DT_CHANGE ELSE (
+		CASE WHEN EXISTS ( SELECT 1 FROM rf2_crefset_sv s4
+							WHERE s4.referencedComponentId = s.referencedComponentId
+							AND s4.effectiveTime = s.effectiveTime
+							AND s4.refsetId IN (@USRefSet,@GBRefSet)
+							-- Check for previous preferred in the other language
+							AND NOT EXISTS ( SELECT 1 FROM rf2_crefset_sv s5
+											 WHERE s5.referencedComponentId = s4.referencedComponentId
+											 AND s5.refsetId IN (@USRefSet,@GBRefSet)
+											 AND NOT s5.refsetId = S4.refsetid
+											 AND s5.effectiveTime < s4.effectiveTime
+											 AND s5.linkedComponentId = s4.linkedComponentId 
+											 AND s5.linkedComponentId = @PREFERRED)
+							) THEN @DT_LC_CHANGE ELSE
+	@LC_CHANGE END) END AS reason, 
+false AS isConcept,
+null
+FROM rf2_crefset_sv s
+WHERE s.refsetId IN (@USRefSet, @GBRefSet)
+AND s.effectiveTime >= @HISTORY_START
+-- We'll also pick up Text Definitions from the Lang Refset, so check it exists 
+-- in the descriptions table, and not as a metadata concept
+AND EXISTS (
+	SELECT 1 FROM rf2_term_sv t, rf2_term_sv t2
+	WHERE t.id = s.referencedComponentId
+	AND t.conceptid = t2.conceptId
+	AND t2.typeid = @FSN
+	AND NOT t2.term like '%metadata concept)'
+)
+-- And make sure there isn't already a change noted for this component / effective time
+AND NOT EXISTS (
+  SELECT 1 from rf21_COMPONENTHISTORY ch
+  where s.referencedComponentId = ch.componentid
+  and s.effectiveTime = ch.releaseversion );
+
+
+-- When a description that is an FSN is added, but not at the same time as the concept
+-- then add a row to indicate an FSN change for the concept
+-- Watch our for changes to case sensitivity.  Filter out cases where earlier active row 
+-- with same description id but different case sensitivity exists.
+-- The status code in this case relates to the inactivation reason for the previous description
+-- Filter out metadata components
+INSERT INTO rf21_COMPONENTHISTORY
+SELECT t.conceptid, t.effectiveTime, '2', 
+-- Find the most recent inactivation reason for the concept, if it exists
+COALESCE ( SELECT magicNumberFor(s.linkedComponentId)
+	from rf2_crefset_sv s
+	where t.conceptId = s.referencedComponentId
+	and s.refSetId = @CONCEPT_INACT_RS
+	AND s.effectiveTime = ( SELECT max(s2.effectiveTime) FROM rf2_crefset_sv s2
+							WHERE s2.referencedComponentId = s.referencedComponentId
+							AND s2.refsetId = s.refSetId
+							AND s2.effectiveTime <= t.effectiveTime)
+	AND s.active = 1,
+	-- WHERE an inactivation indicator is not found, use the status of the 
+	-- most recent status for that component
+		SELECT statusFor(c.active) FROM rf2_concept_sv c
+		WHERE t.conceptId = c.id
+		AND c.effectiveTime = ( SELECT max(c2.effectiveTime) FROM rf2_concept_sv c2
+								WHERE c2.id = c.id
+								AND c2.effectiveTime <= t.effectiveTime)
+	),
+@FSN_CHANGE, TRUE, null 
+FROM rf2_term_sv t
+WHERE t.typeid = @FSN
+AND t.active = 1
+AND t.effectiveTime >= @HISTORY_START
+AND NOT EXISTS (
+	SELECT 1 FROM rf21_COMPONENTHISTORY ch2
+	where t.conceptid = ch2.componentid
+	and t.effectiveTime = ch2.releaseversion
+	and ch2.changetype = '0'
+)
+AND NOT EXISTS (	--Filter out new rows that are just changes to case sensitivity
+					--Unless the actual text of the term has changed
+	SELECT 1 FROM rf2_term_sv t2
+	where t.id = t2.id
+	and t2.effectiveTime < t.effectiveTime
+	and t2.term = t.term
+	and t2.active = 1
+	and NOT t2.casesignificanceid = t.caseSignificanceId
+)
+-- Filter out metadata components
+AND NOT EXISTS ( SELECT 1 from rf2_term_sv t2
+						WHERE t2.typeid = @FSN
+						AND t2.conceptid = t.conceptId
+						AND t2.term like '%metadata concept)' );
+
+
+-- Where there was a component change and the previous version had a different
+-- case sensitivity, set an INITIALCAPITALSTATUS CHANGE.  For descriptions only.
+-- but not where the was also a change in active status, which takes priority.
+-- If both language codes changed at the same time, then the reason becomes @DT_ICS_CHANGE
 UPDATE rf21_COMPONENTHISTORY ch
-SET STATUS = COALESCE (
-	(select magicNumberFor(s.linkedComponentId)
+SET changeType = 2,
+-- Status will be taken from the most recent active inactivation indicator
+STATUS = COALESCE (
+	select max(CASE WHEN s.active = 1 THEN magicNumberFor(s.linkedComponentId) else 0 END) 
 	from rf2_crefset_sv s
 	where s.referencedComponentId = ch.componentId
 	and s.refSetId = @DESC_INACT_RS
-	AND s.effectiveTime = ch.releaseVersion
-	AND s.active = 1),0) 
-WHERE changeType = 0
-AND isConcept = false;
+	-- The current inactivation indicator might be inactive
+	AND s.effectiveTime = ( SELECT MAX(s2.effectivetime) from rf2_crefset_sv s2
+							WHERE s.refsetId = s2.refsetId
+							AND s.referencedComponentId = s2.referencedComponentId
+							AND s2.effectivetime <= ch.releaseVersion)
+	,0) ,
+reason = CASE WHEN EXISTS ( SELECT 1 FROM rf2_crefset_sv s2
+							WHERE s2.referencedComponentId = ch.componentId
+							AND s2.effectiveTime = ch.releaseVersion
+							AND s2.refsetId IN ( @USRefSet, @GBRefSet)
+							-- Check we haven't got a first time inactive entry lang entry
+							AND NOT ( s2.active = 0 AND NOT EXISTS (
+								SELECT 1 FROM rf2_crefset_sv s3
+								WHERE s3.referencedComponentId = ch.componentId
+								AND s3.refsetId = s2.refsetId
+								AND s3.effectiveTime < s2.effectiveTime
+								AND s3.active = 1 ))
+							)
+THEN @DT_ICS_CHANGE ELSE @ICS_CHANGE END
+WHERE ch.isConcept = FALSE
+AND ch.changeType =  @NOT_SET
+AND EXISTS (
+	SELECT 1 FROM rf2_term_sv t1, rf2_term_sv t2
+	WHERE ch.componentid = t1.id
+	AND t1.id = t2.id
+	AND t1.effectiveTime = ch.releaseVersion
+	AND t2.effectiveTime = ch.previousVersion
+	AND t1.active = t2.active
+	AND NOT t1.casesignificanceid = t2.casesignificanceid
+);
 
+-- Where there's been a status change but we haven't found an inactivation reason, 
+-- just set the status to 1 - reason unknown
 -- Update concepts where the active status has changed
 UPDATE rf21_COMPONENTHISTORY ch
 SET CHANGETYPE=1,
 STATUS = statusFor ( select active from rf2_concept_sv c
 						where ch.componentid = c.id
 						and ch.releaseversion = c.effectiveTime ),
-Reason =  @S_CHANGE
+Reason =  @CS_CHANGE
 WHERE EXISTS (
 	SELECT 1 FROM rf2_concept_sv c2, rf2_concept_sv c3
 	WHERE ch.componentid = c2.id
@@ -88,7 +399,9 @@ WHERE EXISTS (
 	AND c3.effectiveTime = ch.previousVersion
 	AND c2.active != c3.active
 )
-AND ch.isConcept = TRUE;
+AND ch.status = @NOT_SET
+AND ch.isConcept = TRUE
+AND releaseversion >=  @HISTORY_START;
 
 -- Update descriptions where the active status has changed
 UPDATE rf21_COMPONENTHISTORY ch
@@ -105,155 +418,30 @@ WHERE EXISTS (
 	AND t3.effectiveTime = ch.previousVersion
 	AND t2.active != t3.active
 ) -- Where an FSN has been made inactive, add that as a change to the concept
-AND ch.isConcept = FALSE;
-
--- Where there is a status change check if the Attribute Value Refset has an entry
--- for that date which indicates why it was made inactive
-UPDATE rf21_COMPONENTHISTORY ch
-SET STATUS = COALESCE (
-	(select magicNumberFor(s.linkedComponentId)
-	from rf2_crefset s
-	where s.referencedComponentId = ch.componentId
-	and s.refSetId  IN (@CONCEPT_INACT_RS,@DESC_INACT_RS)
-	AND s.effectiveTime = ch.releaseVersion
-	AND s.active = 1),ch.status)
-WHERE CHANGETYPE='1';
-
--- When a description that is an FSN is added, but not at the same time as the concept
--- then add a row to indicate an FSN change for the concept
--- Watch our for changes to case sensitivity.  Filter out cases where earlier active row 
--- with different case sensitivity exists.
--- The status code in this case relates to the inactivation reason for the previous description
-INSERT INTO rf21_COMPONENTHISTORY
-SELECT t.conceptid, t.effectiveTime, '2', 
--- Find the inactivation reason for the OTHER term which was inactivated
--- IN 2008 history correctly defaulted to 1 for 'No Specified Reason', otherwise 0
-COALESCE ( SELECT max(magicNumberFor(s.linkedComponentId))
-	from rf2_crefset_sv s, rf2_term_sv t2
-	where t2.conceptId = t.conceptId
-	AND t2.typeid = @FSN
-	AND s.referencedComponentId = t2.id
-	and s.refSetId ='900000000000490003' -- Description Inactivation Indicator
-	AND s.effectiveTime = t2.effectiveTime
-	AND t2.effectiveTime = t.effectiveTime
-	AND s.active = 1,
-	CASE WHEN t.effectiveTime in (20080131, 20080731) THEN 1 else 0 END ),
-'FULLYSPECIFIEDNAME CHANGE', TRUE, null 
-FROM rf2_term_sv t
-WHERE t.typeid = @FSN
-AND t.active = 1
-AND NOT EXISTS (
-	SELECT 1 FROM rf21_COMPONENTHISTORY ch2
-	where t.conceptid = ch2.componentid
-	and t.effectiveTime = ch2.releaseversion
-	and ch2.changetype = '0'
-)
-AND NOT EXISTS (
-	SELECT 1 FROM rf2_term_sv t2
-	where t.id = t2.id
-	and t2.effectiveTime < t.effectiveTime
-	and t2.active = 1
-	and NOT t2.casesignificanceid = t.caseSignificanceId
-);
-
--- In 20080731, FSN changes were incorrectly given status 2 (Duplicate) when in 
--- fact the attribute value had said "Concept not current" and was inactivated 
--- when the FSN was inactivated (since that inactivation reason is only valid for active 
--- descriptions).   Try to reproduce this anomoly (32K rows)
-UPDATE rf21_COMPONENTHISTORY
-SET status = 2
-WHERE releaseVersion = 20080731
-AND status = 8
-AND changeType = 2
-AND isConcept = TRUE;
-
--- Where there was a status change and the previous version had a different
--- case sensitivity, set an INITIALCAPITALSTATUS CHANGE.  For descriptions only.
-UPDATE rf21_COMPONENTHISTORY ch
-SET changeType = 2,
-STATUS = COALESCE (
-	(select max(magicNumberFor(s.linkedComponentId))
-	from rf2_crefset_sv s
-	where s.referencedComponentId = ch.componentId
-	and s.refSetId = @DESC_INACT_RS
-	AND s.effectiveTime <= ch.releaseVersion
-	AND s.active = 1),0) ,
-reason = @ICS_CHANGE
-WHERE ch.isConcept = FALSE
-AND EXISTS (
-	SELECT 1 FROM rf2_term_sv t1, rf2_term_sv t2
-	WHERE ch.componentid = t1.id
-	AND t1.id = t2.id
-	AND t1.effectiveTime = ch.releaseVersion
-	AND t2.effectiveTime = ch.previousVersion
-	AND NOT t1.casesignificanceid = t2.casesignificanceid
-);
-
--- When a concept goes inactive, if there is not already a row for 
--- the description changing state, then add one in 
--- TODO We could also get this just from the attribute value (inactivation reason) appearing...?
-INSERT INTO rf21_COMPONENTHISTORY
-SELECT DISTINCT t.id, ch2.releaseVersion, 1, 8,  @DS_CHANGE, false, null
-FROM rf21_COMPONENTHISTORY ch2, rf21_COMPONENTHISTORY ch3, rf2_term_sv t
-WHERE ch2.componentid = ch3.componentid
-AND ch2.isConcept = TRUE
-AND ch3.releaseVersion = ch2.previousVersion
-AND ch2.status > 0
-AND t.conceptid = ch2.componentid
-AND t.active = 1
-AND t.effectiveTime < ch2.releaseVersion
-AND NOT EXISTS (
-	SELECT 1 FROM rf2_term_sv t2
-	WHERE t.id = t2.id
-	AND t2.active = 0
-	AND t2.effectiveTime <= ch2.releaseVersion 
-);
-
--- When a concept goes inactive, description statuses get set to 8 - "Remains as a valid Description of a Concept which is no longer active."
-UPDATE rf21_COMPONENTHISTORY ch
-SET status = 8
-WHERE ch.isConcept = false
-AND EXISTS (
-	SELECT 1 FROM rf21_COMPONENTHISTORY ch2, rf2_term t
-	WHERE ch.componentId = t.id
-	AND t.conceptId = ch2.componentId
-	AND ch.releaseVersion = ch2.releaseVersion
-	AND NOT ch2.status = 0
-	AND ch.status = 0
-);
-
--- Now pick up cases where the component was already inactive, but later had an 
--- inactivation reason added
-INSERT INTO rf21_COMPONENTHISTORY
-SELECT s.referencedComponentId, 
-s.effectiveTime AS releaseVersion,
-1 AS ChangeType,
-magicNumberFor(s.linkedComponentId) AS Status,
-CASE WHEN s.refsetId = @DESC_INACT_RS THEN @DS_CHANGE else @S_CHANGE END AS Reason,
-CASE WHEN s.refsetId = @DESC_INACT_RS THEN false else true END AS isConcept,
-null as previousVersion
-FROM rf2_crefset_sv s
-WHERE s.active = 1
-AND NOT EXISTS (
-	SELECT 1 FROM rf21_COMPONENTHISTORY ch
-	WHERE ch.componentId = s.referencedComponentId
-	AND ch.releaseVersion = s.effectiveTime
-);
-
--- 
-
--- And now for some ...hopefully temporary... tweaks because the reason given 
--- in the status change does not appear to be consistent between status codes.
-UPDATE rf21_COMPONENTHISTORY
-SET reason = 'CONCEPTSTATUS CHANGE'
-WHERE status = 4;
+AND ch.isConcept = FALSE
+AND ch.status = @NOT_SET
+AND releaseversion >=  @HISTORY_START;
 
 -- Now delete anything we haven't found a reason for.  Eg changes to definitionStatusId
 DELETE from rf21_COMPONENTHISTORY
-WHERE status = -1;
+WHERE status =  @NOT_SET;
 
--- Apparently the reason "STATUS CHANGE" wasn't populated in "20020731"
-UPDATE rf21_COMPONENTHISTORY
-SET reason = null
-WHERE releaseVersion = 20020731
-AND reason = @S_CHANGE;
+-- And where we have two changes, delete the less significant eg type 2
+-- Or where completely identical, the shorter of the two reasons
+DELETE from rf21_COMPONENTHISTORY ch
+WHERE EXISTS (
+  SELECT 1 from rf21_COMPONENTHISTORY ch2
+  WHERE ch.componentid = ch2.componentId
+  AND ch.releaseversion = ch2.releaseVersion
+  AND ( 
+		(
+		ch.changeType > ch2.changeType
+		OR (ch.changeType = ch2.changeType AND ch.status = 1 AND NOT ch2.status = 1)
+		OR (ch.changeType = ch2.changeType AND ch.status = 0 AND NOT ch2.status = 0)
+		)
+	OR (
+		ch.changeType = ch2.changeType
+		AND length(ch.reason) < length(ch2.reason)
+		)
+	)
+);

@@ -1,9 +1,17 @@
 package org.ihtsdo.snomed.rf2torf1conversion;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.zip.ZipInputStream;
 
-public class RF1Constants {
+import org.ihtsdo.snomed.rf2torf1conversion.pojo.RF1SchemaConstants;
+
+public class RF1Constants implements RF1SchemaConstants{
 
 	public static final String FSN = "900000000000003001";
 	public static final String DEFINITION = "900000000000550004";
@@ -11,7 +19,17 @@ public class RF1Constants {
 	public static final String INFERRED = "900000000000011006";
 	public static final String STATED = "900000000000010007";
 	public static final String ADDITIONAL = "900000000000227009";
-
+	
+	public static final int NOT_REFINE = 0;
+	public static final int MAY_REFINE = 1;
+	public static final int MUST_REFINE = 2;
+	
+	private static final String DELIM = "_";
+	
+	//Map of triple+group to SCTID
+	public static Map<String, String> previousRelationships = new HashMap<String, String>();
+	private static BufferedReader availableRelationshipIds;
+	
 	private static Map<String, Byte> rf1Map = new HashMap<String, Byte>();
 	static {
 		rf1Map.put("900000000000441003", null); /* SNOMED CT Model Component (metadata) */
@@ -94,14 +112,8 @@ public class RF1Constants {
 		rf1Map.put("900000000000487009", (byte) 10); /* Component moved elsewhere (foundation metadata concept) */
 		rf1Map.put("900000000000492006", (byte) 11); /* Pending move (foundation metadata concept) */
 		rf1Map.put("900000000000493001", null); /* Description inactivation value (foundation metadata concept) */
-		rf1Map.put("900000000000482003", (byte) 2); /* Duplicate component (foundation metadata concept) */
-		rf1Map.put("900000000000483008", (byte) 3); /* Outdated component (foundation metadata concept) */
-		rf1Map.put("900000000000485001", (byte) 5); /* Erroneous component (foundation metadata concept) */
-		rf1Map.put("900000000000486000", (byte) 6); /* Limited component (foundation metadata concept) */
 		rf1Map.put("900000000000494007", (byte) 7); /* Inappropriate component (foundation metadata concept) */
 		rf1Map.put("900000000000495008", (byte) 8); /* Concept non-current (foundation metadata concept) */
-		rf1Map.put("900000000000487009", (byte) 10); /* Component moved elsewhere (foundation metadata concept) */
-		rf1Map.put("900000000000492006", (byte) 11); /* Pending move (foundation metadata concept) */
 		rf1Map.put("900000000000546006", null); /* Inactive value (foundation metadata concept) */
 		rf1Map.put("900000000000545005", null); /* Active value (foundation metadata concept) */
 		rf1Map.put("900000000000458008", null); /* Attribute description (foundation metadata concept) */
@@ -155,6 +167,13 @@ public class RF1Constants {
 		}
 		return null;
 	}
+	
+	public static Byte getMagicNumberDebug(String refsetId, String sctid) {
+		if (rf1Map.containsKey(sctid)) {
+			return rf1Map.get(sctid);
+		}
+		return null;
+	}
 
 	private static Map<String, String> sourceMap = new HashMap<String, String>();
 	static {
@@ -175,6 +194,19 @@ public class RF1Constants {
 
 	public static byte translateActive(boolean rf2Active) {
 		return rf2Active ? (byte) 0 : (byte) 1;
+	}
+	
+	public static byte translateDescriptionActive(boolean rf2DescActive, boolean rf2ConActive) {
+		//If the description is inactive, the RF1 status is 1
+		//but if it's active, then if the CONCEPT is inactive, then that's indicated
+		//with status 8
+		if (!rf2DescActive) {
+			return (byte) 1;  //Inactive, reason unknown
+		} else if (!rf2ConActive) {
+			return (byte) 8;  //Concept inactive for active description
+		} else {
+			return (byte) 0;  //Active 
+		}
 	}
 
 	public static byte translateDescType(String sctid) {
@@ -198,5 +230,60 @@ public class RF1Constants {
 			case ADDITIONAL: return 3;
 		}
 		return 9;  //Invalid value
+	}
+	
+	
+	public static String lookupRelationshipId(String source, String type, String destination, String groupNum) throws RF1ConversionException, IOException {
+		String key = source + DELIM + type + DELIM + destination + DELIM + groupNum;
+		//Do we already have an SCTID for this key?
+		if (previousRelationships.containsKey(key)) {
+			return previousRelationships.get(key);
+		}
+		//Otherwise get the next one available and assign it so there's no danger of using it again
+		String nextSCTID = getNextAvailableRelationship();
+		previousRelationships.put(key, nextSCTID);
+		return nextSCTID;
+	}
+	
+	private static String getNextAvailableRelationship() throws RF1ConversionException, IOException {
+		boolean isAvailable = false;
+		String sctId = null;
+		while (!isAvailable) {
+			sctId = availableRelationshipIds.readLine();
+			if (sctId == null) {
+				throw new RF1ConversionException("Run out of available relationship SCTIDs.  Contact IHTSDO");
+			}
+			isAvailable = !previousRelationships.containsValue(sctId);
+		}
+		return sctId;
+	}
+
+	public static void intialiseAvailableRelationships(InputStream resource) {
+		availableRelationshipIds = new BufferedReader(new InputStreamReader(resource, StandardCharsets.UTF_8));
+	}
+	
+	/**
+	 * Stores the previous relationships in a map of triple+group to sctid, so they can 
+	 * be used for reconciliation or augmented with relationships from available_sctids_partition_02
+	 */
+	public static void loadPreviousRelationships(ZipInputStream zis) throws IOException {
+
+		String line;
+		boolean isFirstLine = true;
+		//We don't want to close this reader because we have more to get out of zis
+		BufferedReader br = new BufferedReader(new InputStreamReader(zis, StandardCharsets.UTF_8));
+		while ((line = br.readLine()) != null) {
+			if (isFirstLine) {
+				isFirstLine = false;
+				continue;
+			}
+			String[] lineItems = line.split(RF1_FIELD_DELIMITER);
+			String triplePlusGroup = lineItems[RF1_IDX_CONCEPTID1] + DELIM 
+									+ lineItems[RF1_IDX_RELATIONSHIPTYPE] + DELIM
+									+ lineItems[RF1_IDX_CONCEPTID2] + DELIM
+									+ lineItems[RF1_IDX_RELATIONSHIPGROUP];
+			previousRelationships.put(triplePlusGroup, lineItems[RF1_IDX_RELATIONSHIPID]);
+		}
+		
 	}
 }

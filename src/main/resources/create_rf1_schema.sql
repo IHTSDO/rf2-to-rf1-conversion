@@ -1,9 +1,13 @@
 
 CREATE ALIAS magicNumberFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.getMagicNumber";
 
+CREATE ALIAS magicNumberDebug FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.getMagicNumberDebug";
+
 CREATE ALIAS moduleSourceFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.getModuleSource";
 
 CREATE ALIAS statusFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.translateActive";
+
+CREATE ALIAS descriptionStatusFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.translateDescriptionActive";
 
 CREATE ALIAS descTypeFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.translateDescType";
 
@@ -12,6 +16,8 @@ CREATE ALIAS capitalStatusFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Const
 CREATE ALIAS characteristicFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.translateCharacteristic";
 
 CREATE ALIAS refinabilityFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.translateRefinability";
+
+CREATE ALIAS relationshipIdFor FOR "org.ihtsdo.snomed.rf2torf1conversion.RF1Constants.lookupRelationshipId";
 
 DROP TABLE IF EXISTS rf21_CONCEPT;
 CREATE TABLE rf21_CONCEPT (
@@ -132,6 +138,6 @@ CREATE TABLE rf21_COMPONENTHISTORY (
 	CHANGETYPE		CHAR (2) NOT NULL,
 	STATUS			CHAR (2) NOT NULL,
 	REASON			VARCHAR(255),
-	ISCONCEPT		BOOLEAN NOT NULL,
+	ISCONCEPT		BOOLEAN,
 	PREVIOUSVERSION	BIGINT);
 	

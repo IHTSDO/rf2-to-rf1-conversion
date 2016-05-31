@@ -19,8 +19,9 @@ public class GlobalUtils {
 
 	public static boolean verbose;
 
-	private static long maxOperations = 399;
+	private static long targetOperationCount = 443;
 	private static long queriesRun = 0;
+	private static String BETA_PREFIX = "x";
 
 	public static void print(String msg) {
 		System.out.println(msg);
@@ -40,7 +41,7 @@ public class GlobalUtils {
 		}
 	}
 
-	public static void unzipFlat(File archive, File targetDir, String matchStr) throws RF1ConversionException {
+	public static void unzipFlat(File archive, File targetDir, String[] matchArray) throws RF1ConversionException {
 
 		if (!targetDir.exists() || !targetDir.isDirectory()) {
 			throw new RF1ConversionException(targetDir + " is not a viable directory in which to extract archive");
@@ -52,14 +53,20 @@ public class GlobalUtils {
 				while (ze != null) {
 					if (!ze.isDirectory()) {
 						Path p = Paths.get(ze.getName());
-						String extractedFileName = p.getFileName().toString();
-						if (matchStr == null || extractedFileName.contains(matchStr)) {
-							debug("Extracting " + extractedFileName);
-							File extractedFile = new File(targetDir, extractedFileName);
-							OutputStream out = new FileOutputStream(extractedFile);
-							IOUtils.copy(zis, out);
-							IOUtils.closeQuietly(out);
-							updateProgress();
+						String extractedFilename = p.getFileName().toString();
+						for (String matchStr : matchArray) {
+							if (matchStr == null || extractedFilename.contains(matchStr)) {
+								//If the filename is a beta file with x prefix, remove the prefix
+								if (extractedFilename.startsWith(BETA_PREFIX)) {
+									extractedFilename = extractedFilename.substring(1);
+								}
+								debug("Extracting " + extractedFilename);
+								File extractedFile = new File(targetDir, extractedFilename);
+								OutputStream out = new FileOutputStream(extractedFile);
+								IOUtils.copy(zis, out);
+								IOUtils.closeQuietly(out);
+								updateProgress();
+							}
 						}
 					}
 					ze = zis.getNextEntry();
@@ -91,18 +98,18 @@ public class GlobalUtils {
 		return queriesRun;
 	}
 
-	public static long getMaxOperations() {
-		return GlobalUtils.maxOperations;
+	public static long getTargetOperationCount() {
+		return GlobalUtils.targetOperationCount;
 	}
 	
-	synchronized public static void setMaxOperations(long maxOperations) {
-		GlobalUtils.maxOperations = maxOperations;
+	synchronized public static void setTargetOperationCount(long operations) {
+		GlobalUtils.targetOperationCount = operations;
 	}
 
 	synchronized public static void updateProgress() {
 		queriesRun++;
-		if (!verbose && queriesRun <= maxOperations) {
-			double percentageComplete = (((double)queriesRun) / ((double)maxOperations)) * 100d;
+		if (!verbose && queriesRun <= targetOperationCount) {
+			double percentageComplete = (((double)queriesRun) / ((double)targetOperationCount)) * 100d;
 			printn("\r" + String.format("%.2f", percentageComplete) + "% complete.");
 		}
 	}

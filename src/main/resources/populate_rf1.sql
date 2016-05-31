@@ -1,26 +1,4 @@
---TODO Find another way to identify metadata concepts, or pull in search 
---phrase as part of extension configuration
-INSERT INTO rf21_concept
-SELECT DISTINCT
-  id AS CONCEPTID,
-  statusFor(active) AS CONCEPTSTATUS,
-  '' AS FULLYSPECIFIEDNAME,
-  'Xxxxx' AS CTV3ID,
-  'Xxxxx' AS SNOMEDID,
-  magicNumberFor(definitionStatusId) AS ISPRIMITIVE,
-  moduleSourceFor(moduleId) AS SOURCE
-FROM rf2_concept c
-WHERE NOT EXISTS (
-	-- Don't include any metadata concepts
-	SELECT 1 FROM rf2_term t
-	WHERE c.id = t.conceptid
-	AND t.typeid = 900000000000003001 --fsn
-	AND ( t.term like '%metadata concept)' OR t.term like '%metadato fundacional)'
-	OR t.term like '%metadato del núcleo)' )
-);
-
-CREATE UNIQUE INDEX CONCEPT_CUI_X ON rf21_concept(CONCEPTID);
-
+SET @MetadataModule = '900000000000012004';
 SET @FSN = '900000000000003001';
 SET @SYN = '900000000000013009';
 SET @ISA = '116680003';
@@ -34,6 +12,30 @@ SET @Preferred = '900000000000548007';
 SET @CInactivationRefSet = '900000000000489007';
 SET @DInactivationRefSet = '900000000000490003';
 SET @IntLangCode = 'en';
+
+--TODO Find another way to identify metadata concepts, or pull in search 
+--phrase as part of extension configuration
+INSERT INTO rf21_concept
+SELECT DISTINCT
+  id AS CONCEPTID,
+  statusFor(active) AS CONCEPTSTATUS,
+  '' AS FULLYSPECIFIEDNAME,
+  'Xxxxx' AS CTV3ID,
+  'Xxxxx' AS SNOMEDID,
+  magicNumberFor(definitionStatusId) AS ISPRIMITIVE,
+  moduleSourceFor(moduleId) AS SOURCE
+FROM rf2_concept c
+WHERE NOT EXISTS (
+	-- Don't include any metadata concepts that are still in the metadata hierarchy
+	SELECT 1 FROM rf2_term t
+	WHERE c.id = t.conceptid
+	AND t.typeid = @FSN
+	AND moduleId =  @MetadataModule
+	AND ( t.term like '%metadata concept)' OR t.term like '%metadato fundacional)'
+	OR t.term like '%metadato del núcleo)' )
+);
+
+CREATE UNIQUE INDEX CONCEPT_CUI_X ON rf21_concept(CONCEPTID);
 
 INSERT INTO rf21_term
 SELECT
@@ -61,7 +63,7 @@ FROM rf2_def WHERE active = 1;
 
 INSERT INTO rf21_rel
 SELECT
-  null AS RELATIONSHIPID,
+  CASE WHEN @useRelationshipIds = true THEN r.id ELSE null END AS RELATIONSHIPID,
   r.sourceId AS CONCEPTID1,
   r.typeId AS RELATIONSHIPTYPE,
   r.destinationId AS CONCEPTD2,
@@ -89,10 +91,8 @@ WHERE characteristicTypeId = @Stated /* Only stated relationships */
 AND r.sourceId = c1.conceptid
 AND r.destinationId = c2.conceptid;
 
--- PARALLEL_END;
-
 CREATE INDEX idx_21t_cid ON rf21_term(CONCEPTID);
-CREATE /*UNIQUE*/ INDEX idx_21t_did ON rf21_term(descriptionId);
+CREATE INDEX idx_21t_did ON rf21_term(descriptionId);
 CREATE INDEX idx_21t_ds ON rf21_term(descriptionStatus);
 
 CREATE INDEX IDX_REL_CUI1_X ON rf21_rel(CONCEPTID1);
@@ -203,7 +203,4 @@ d.SNOMEDID = (
 	from rf21_concept c2
 	where c2.conceptid = d.conceptid
 );
-	
 
-
-	
