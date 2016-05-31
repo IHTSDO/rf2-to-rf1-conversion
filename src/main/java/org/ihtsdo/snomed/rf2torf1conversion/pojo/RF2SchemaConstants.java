@@ -9,6 +9,8 @@ public interface RF2SchemaConstants {
 	// id effectiveTime active moduleId sourceId destinationId relationshipGroup typeId characteristicTypeId modifierId
 	public static final String ISA = "116680003";
 	public static final Long ISA_ID = Long.parseLong(ISA);
+	
+	public static final String UNGROUPED = "0";
 
 	public static final String CHARACTERISTIC_STATED_SCTID = "900000000000010007";
 	public static final String FIELD_DELIMITER = "\t";

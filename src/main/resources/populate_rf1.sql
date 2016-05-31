@@ -63,7 +63,7 @@ FROM rf2_def WHERE active = 1;
 
 INSERT INTO rf21_rel
 SELECT
-  null AS RELATIONSHIPID,
+  CASE WHEN @useRelationshipIds = true THEN r.id ELSE null END AS RELATIONSHIPID,
   r.sourceId AS CONCEPTID1,
   r.typeId AS RELATIONSHIPTYPE,
   r.destinationId AS CONCEPTD2,
@@ -90,8 +90,6 @@ FROM rf2_rel r, rf21_concept c1, rf21_concept c2  /*Only relationships for conce
 WHERE characteristicTypeId = @Stated /* Only stated relationships */
 AND r.sourceId = c1.conceptid
 AND r.destinationId = c2.conceptid;
-
--- PARALLEL_END;
 
 CREATE INDEX idx_21t_cid ON rf21_term(CONCEPTID);
 CREATE INDEX idx_21t_did ON rf21_term(descriptionId);
@@ -205,7 +203,4 @@ d.SNOMEDID = (
 	from rf21_concept c2
 	where c2.conceptid = d.conceptid
 );
-	
 
-
-	

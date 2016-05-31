@@ -20,8 +20,6 @@ SET @CONCEPT_NON_CURRENT = 8;
 SET @ADDED = 0;
 SET @NOT_SET = -1;
 
-SET @COMPONENT_OF_INTEREST = 385356011;
-
 -- PARALLEL_START;
 -- Insert all concept changes into history and we'll work out what changes where made
 -- in a subsequent pass.
@@ -93,8 +91,6 @@ CREATE INDEX idx_comphist_status ON rf21_COMPONENTHISTORY(status);
 CREATE INDEX idx_comphist_prev ON rf21_COMPONENTHISTORY(previousVersion);
 CREATE INDEX idx_comphist_c ON rf21_COMPONENTHISTORY(isConcept);
 
-SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
-
 -- Where the term has been created and there is immediate inactivation indicator
 UPDATE rf21_COMPONENTHISTORY ch
 -- Either find an inactivation indicator, or work the status out from the description and concept status
@@ -112,8 +108,6 @@ AND EXISTS (
 	AND s.active = 1
 	AND s.referencedComponentId = ch.componentId
 	AND s.effectiveTime = ch.releaseVersion);
-
-SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
 
 -- CONCEPT INACTIVATION
 -- Where there is no other change, but the inactivation indicator
@@ -148,8 +142,6 @@ AND NOT EXISTS (
 								AND ch2.releaseVersion <= s.effectiveTime )
 	and ch.status = magicNumberFor(s.linkedComponentId)
 );
-
-SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
 
 -- DESCRIPTION INACTIVATION
 -- Where there is no other change, but the inactivation indicator
@@ -210,8 +202,6 @@ AND NOT EXISTS (
 	AND s4.active = 0
 	AND s.active = 1
 );
-
-SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
 
 -- Now if we have rows that do not have a status set that are duplicates with rows that do
 -- then now would be good time to delete those before we can't tell between them.
@@ -348,8 +338,6 @@ AND NOT EXISTS ( SELECT 1 from rf2_term_sv t2
 						AND t2.conceptid = t.conceptId
 						AND t2.term like '%metadata concept)' );
 
-SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
-
 
 -- Where there was a component change and the previous version had a different
 -- case sensitivity, set an INITIALCAPITALSTATUS CHANGE.  For descriptions only.
@@ -394,9 +382,6 @@ AND EXISTS (
 	AND NOT t1.casesignificanceid = t2.casesignificanceid
 );
 
-SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
-
-
 -- Where there's been a status change but we haven't found an inactivation reason, 
 -- just set the status to 1 - reason unknown
 -- Update concepts where the active status has changed
@@ -437,8 +422,6 @@ AND ch.isConcept = FALSE
 AND ch.status = @NOT_SET
 AND releaseversion >=  @HISTORY_START;
 
-SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;
-
 -- Now delete anything we haven't found a reason for.  Eg changes to definitionStatusId
 DELETE from rf21_COMPONENTHISTORY
 WHERE status =  @NOT_SET;
@@ -462,5 +445,3 @@ WHERE EXISTS (
 		)
 	)
 );
-
-SELECT * from rf21_COMPONENTHISTORY where componentid = @COMPONENT_OF_INTEREST;

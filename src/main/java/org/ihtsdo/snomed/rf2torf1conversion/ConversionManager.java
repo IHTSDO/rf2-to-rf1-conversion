@@ -5,6 +5,7 @@ import static org.ihtsdo.snomed.rf2torf1conversion.GlobalUtils.*;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -17,7 +18,12 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
@@ -26,6 +32,7 @@ import org.ihtsdo.snomed.rf2torf1conversion.pojo.ConceptDeserializer;
 import org.ihtsdo.snomed.rf2torf1conversion.pojo.LateralityIndicator;
 import org.ihtsdo.snomed.rf2torf1conversion.pojo.QualifyingRelationshipAttribute;
 import org.ihtsdo.snomed.rf2torf1conversion.pojo.QualifyingRelationshipRule;
+import org.ihtsdo.snomed.rf2torf1conversion.pojo.RF1SchemaConstants;
 import org.ihtsdo.snomed.rf2torf1conversion.pojo.RF2SchemaConstants;
 
 import com.google.common.base.Stopwatch;
@@ -34,12 +41,14 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
-public class ConversionManager implements RF2SchemaConstants{
+public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants {
 
 	File intRf2Archive;
 	File extRf2Archive;
 	File unzipLocation = null;
 	File additionalFilesLocation = null;
+	File previousRF1Location;
+	boolean useRelationshipIds = false;
 	DBManager db;
 	String intReleaseDate;
 	String extReleaseDate;
@@ -58,10 +67,14 @@ public class ConversionManager implements RF2SchemaConstants{
 	private String outputFolderTemplate = "SnomedCT_OUT_INT_DATE";
 	private String ANCIENT_HISTORY = "/sct1_ComponentHistory_Core_INT_20130731.txt";
 	private String QUALIFYING_RULES = "/qualifying_relationship_rules.json";
-	private String LATERALITY_FILE = "/LateralityReference20160131.txt";
+	private String AVAILABLE_SUBSET_IDS = "/available_sctids_partition_03.txt";
+	private String AVAILABLE_RELATIONSHIP_IDS = "/available_sctids_partition_02.txt";
 	private String RELATIONSHIP_FILENAME = "SnomedCT_OUT_INT_DATE/Terminology/Content/sct1_Relationships_Core_INT_DATE.txt";
 	private String BETA_PREFIX = "x";
 	Set<File> filesLoaded = new HashSet<File>();
+	private Long[] subsetIds;
+	private Long maxPreviousSubsetId = null;
+	private int  previousSubsetVersion = 29;  //Taken from 20160131 RF1 International Release
 	
 	enum Edition { INTERNATIONAL, SPANISH };
 	
@@ -185,7 +198,6 @@ public class ConversionManager implements RF2SchemaConstants{
 		Stopwatch stopwatch = Stopwatch.createStarted();
 		String completionStatus = "failed";
 		try {
-
 			print("\nExtracting RF2 International Edition Data...");
 			intLoadingArea = unzipArchive(intRf2Archive);
 			intReleaseDate = findDateInString(intLoadingArea.listFiles()[0].getName(), false);
@@ -197,19 +209,38 @@ public class ConversionManager implements RF2SchemaConstants{
 				extReleaseDate = findDateInString(extloadingArea.listFiles()[0].getName(), false);
 				determineEdition(extloadingArea, null, extReleaseDate);	
 				isExtension = true;
-			} 
-			
-			long maxOperations = getMaxOperations();
-			if (onlyHistory) {
-				maxOperations = 250;
-			} else if (isExtension) {
-				maxOperations = includeHistory? maxOperations : 388;
-			} else {
-				maxOperations = includeHistory? maxOperations : 391;
 			}
-			setMaxOperations(maxOperations);
-			
+			String releaseDate = isExtension ? extReleaseDate : intReleaseDate;
+			int releaseIndex = calculateReleaseIndex(releaseDate);
 			EditionConfig config = knownEditionMap.get(edition);
+			int newSubsetVersion = 0;
+			if (previousRF1Location != null) {
+				useRelationshipIds = true;
+				//This will allow us to set up SubsetIds (using available_sctids_partition_03)
+				//And a map of existing relationship Ids to use for reconciliation
+				loadPreviousRF1(config);
+				
+				//Initialise a set of available SCTIDS
+				InputStream availableRelIds = ConversionManager.class.getResourceAsStream(AVAILABLE_RELATIONSHIP_IDS);
+				RF1Constants.intialiseAvailableRelationships(availableRelIds);
+				newSubsetVersion = previousSubsetVersion + 1;
+			} else {
+				useDeterministicSubsetIds(releaseIndex, config);
+				newSubsetVersion = previousSubsetVersion + releaseIndex;
+			}
+			db.runStatement("SET @useRelationshipIds = " + useRelationshipIds);
+			setSubsetIds(newSubsetVersion);
+			
+			long targetOperationCount = getTargetOperationCount();
+			if (onlyHistory) {
+				targetOperationCount = 250;
+			} else if (isExtension) {
+				targetOperationCount = includeHistory? targetOperationCount : 388;
+			} else {
+				targetOperationCount = includeHistory? targetOperationCount : 391;
+			}
+			setTargetOperationCount(targetOperationCount);
+
 			completeOutputMap(config);
 			db.runStatement("SET @langCode = '" + config.langCode + "'");
 			db.runStatement("SET @langRefSet = '" + config.dialects[0].langRefSetId + "'");
@@ -219,7 +250,6 @@ public class ConversionManager implements RF2SchemaConstants{
 			
 			//Load the rest of the files from the same loading area if International Release, otherwise use the extensionLoading  Area
 			File loadingArea = isExtension ? extloadingArea : intLoadingArea;
-			String releaseDate = isExtension ? extReleaseDate : intReleaseDate;
 			print("\nLoading " + edition +" RF2 Data...");
 			loadRF2Data(loadingArea, edition, releaseDate, extfileToTable);				
 
@@ -269,7 +299,7 @@ public class ConversionManager implements RF2SchemaConstants{
 				doInteractive();
 			}
 		} finally {
-			print("\nProcess " + completionStatus + " in " + stopwatch + " after completing " + getProgress() + "/" + getMaxOperations()
+			print("\nProcess " + completionStatus + " in " + stopwatch + " after completing " + getProgress() + "/" + getTargetOperationCount()
 					+ " operations.");
 			print("Cleaning up resources...");
 			try {
@@ -432,12 +462,14 @@ public class ConversionManager implements RF2SchemaConstants{
 
 	private void init(String[] args, File dbLocation) throws RF1ConversionException {
 		if (args.length < 1) {
-			print("Usage: java ConversionManager [-v] [-h] [-b] [-i] [-q] [-a <additional files location>] [-u <unzip location>] <rf2 archive location> [<rf2 extension archive>]");
+			print("Usage: java ConversionManager [-v] [-h] [-b] [-i] [-q] [-a <additional files location>] [-p <previous RF1 archive] [-u <unzip location>] <rf2 archive location> [<rf2 extension archive>]");
 			print("  b - beta indicator, causes an x to be prepended to output filenames");
+			print("  p - previous RF1 archive required for SubsetId and Relationship Id generation");
 			exit();
 		}
 		boolean isUnzipLocation = false;
 		boolean isAdditionalFilesLocation = false;
+		boolean isPreviousRF1Location = false;
 
 		for (String thisArg : args) {
 			if (thisArg.equals("-v")) {
@@ -451,8 +483,10 @@ public class ConversionManager implements RF2SchemaConstants{
 				isBeta = true;
 			}else if (thisArg.equals("-u")) {
 				isUnzipLocation = true;
-			}  else if (thisArg.equals("-a")) {
+			} else if (thisArg.equals("-a")) {
 				isAdditionalFilesLocation = true;
+			} else if (thisArg.equals("-p")) {
+				isPreviousRF1Location = true;
 			} else if (thisArg.equals("-q")) {
 				includeAllQualifyingRelationships = true;
 			} else if (isUnzipLocation) {
@@ -467,6 +501,12 @@ public class ConversionManager implements RF2SchemaConstants{
 					throw new RF1ConversionException(thisArg + " is an invalid location to find additional files.");
 				}
 				isAdditionalFilesLocation = false;
+			} else if (isPreviousRF1Location) {
+				previousRF1Location = new File(thisArg);
+				if (!previousRF1Location.exists() || !previousRF1Location.canRead()) {
+					throw new RF1ConversionException(thisArg + " does not appear to be a valid RF1 archive.");
+				}
+				isPreviousRF1Location = false;
 			} else if (intRf2Archive == null){
 				File possibleArchive = new File(thisArg);
 				if (possibleArchive.exists() && !possibleArchive.isDirectory() && possibleArchive.canRead()) {
@@ -582,7 +622,7 @@ public class ConversionManager implements RF2SchemaConstants{
 				}
 			}
 		} catch (IOException ioe) {
-			throw new RF1ConversionException ("Unable to import laterality indicators file " + LATERALITY_FILE, ioe);
+			throw new RF1ConversionException ("Unable to import laterality reference file " + lateralityFile.getAbsolutePath(), ioe);
 		}
 	}
 	
@@ -645,7 +685,14 @@ public class ConversionManager implements RF2SchemaConstants{
 				for (Concept thisConcept : allConcepts) {
 					if (LateralityIndicator.hasLateralityIndicator(thisConcept.getSctId(), LateralityIndicator.Lattomidsag.YES)) {
 						if (!thisConcept.hasAttribute(LateralityAttribute)) {
-							String rf1Line = FIELD_DELIMITER + thisConcept.getSctId() + commonRF1;
+							String relId = "";  //Default is to blank relationship ids
+							if (useRelationshipIds) {
+								relId = RF1Constants.lookupRelationshipId(thisConcept.getSctId().toString(),
+									LATERALITY_ATTRIB,
+									SIDE_VALUE,
+									UNGROUPED);
+							}
+							String rf1Line = relId + FIELD_DELIMITER + thisConcept.getSctId() + commonRF1;
 							out.println(rf1Line);
 						}
 					}
@@ -744,4 +791,125 @@ public class ConversionManager implements RF2SchemaConstants{
 	}
 
 
+	private void loadPreviousRF1(EditionConfig config) throws RF1ConversionException {
+		try {
+			ZipInputStream zis = new ZipInputStream(new FileInputStream(previousRF1Location));
+			ZipEntry ze = zis.getNextEntry();
+			try {
+				while (ze != null) {
+					if (!ze.isDirectory()) {
+						Path p = Paths.get(ze.getName());
+						String fileName = p.getFileName().toString();
+						if (fileName.contains("der1_Subsets")) {
+							updateSubsetIds(zis, config);
+						} else if (fileName.contains("sct1_Relationships")) {
+							//We need to use static methods here so that H2 can access as functions.
+							print ("\nLoading previous RF1 relationships");
+							RF1Constants.loadPreviousRelationships(zis);
+						}
+					}
+					ze = zis.getNextEntry();
+				}
+			} finally {
+				zis.closeEntry();
+				zis.close();
+			}
+		} catch (IOException e) {
+			throw new RF1ConversionException("Failed to load previous RF1 archive " + previousRF1Location.getName(), e);
+		}
+		
+	}
+	
+	private void updateSubsetIds(ZipInputStream zis, EditionConfig config) throws NumberFormatException, IOException {
+		//This function will also pick up and set the previous subset version
+		Long subsetId = loadSubsetsFile(zis);
+		//Do we need to recover a new set of subsetIds?
+		if (maxPreviousSubsetId == null || subsetId > maxPreviousSubsetId) {
+			maxPreviousSubsetId = subsetId;
+			InputStream is = ConversionManager.class.getResourceAsStream(AVAILABLE_SUBSET_IDS);
+			try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))){
+				String line;
+				int subsetIdsSet = 0;
+				subsetIds = new Long[config.dialects.length];
+				while ((line = br.readLine()) != null && subsetIdsSet < config.dialects.length) {
+					Long thisAvailableSubsetId = Long.parseLong(line.trim());
+					if (thisAvailableSubsetId.compareTo(maxPreviousSubsetId) > 0) {
+						debug ("Obtaining new Subset Ids from resource file");
+						subsetIds[subsetIdsSet] = thisAvailableSubsetId;
+						subsetIdsSet++;
+					}
+				}
+			}
+		}
+		
+	}
+	
+	/*
+	 * @return the greatest subsetId in the file
+	 */
+	private Long loadSubsetsFile(ZipInputStream zis) throws IOException {
+		Long maxSubsetIdInFile = null;
+		BufferedReader br = new BufferedReader(new InputStreamReader(zis, StandardCharsets.UTF_8));
+		String line;
+		boolean isFirstLine = true;
+		while ((line = br.readLine()) != null) {
+			if (isFirstLine) {
+				isFirstLine = false;
+				continue;
+			}
+			String[] lineItems = line.split(FIELD_DELIMITER);
+			//SubsetId is the first column
+			Long thisSubsetId = Long.parseLong(lineItems[RF1_IDX_SUBSETID]);
+			if (maxSubsetIdInFile == null || thisSubsetId > maxSubsetIdInFile) {
+				maxSubsetIdInFile = thisSubsetId;
+			}
+			//SubsetVersion is the 3rd
+			int thisSubsetVersion = Integer.parseInt(lineItems[RF1_IDX_SUBSETVERSION]);
+			if (thisSubsetVersion > previousSubsetVersion) {
+				previousSubsetVersion = thisSubsetVersion;
+			}
+		}
+		return maxSubsetIdInFile;
+	}
+
+	private void useDeterministicSubsetIds(int releaseIndex, EditionConfig config) throws RF1ConversionException {
+		try {
+			InputStream is = ConversionManager.class.getResourceAsStream(AVAILABLE_SUBSET_IDS);
+			try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))){
+				String line;
+				int subsetIdsSet = 0;
+				subsetIds = new Long[config.dialects.length];
+				int filePos = 0;
+				while ((line = br.readLine()) != null && subsetIdsSet < config.dialects.length) {
+					filePos++;
+					Long thisAvailableSubsetId = Long.parseLong(line.trim());
+					if (filePos >= releaseIndex) {
+						debug ("Obtaining new Subset Ids from resource file");
+						subsetIds[subsetIdsSet] = thisAvailableSubsetId;
+						subsetIdsSet++;
+					}
+				}
+			}
+		} catch (IOException e) {
+			throw new RF1ConversionException("Unable to determine new subset Ids",e);
+		}
+	}
+	
+	private void setSubsetIds(int newSubsetVersion) {
+		for (int i=0 ; i<subsetIds.length; i++) {
+			db.runStatement("SET @SUBSETID_" + (i+1) + " = " + subsetIds[i]);
+		}
+		db.runStatement("SET @SUBSET_VERSION = " + newSubsetVersion);
+	}
+
+	int calculateReleaseIndex(String releaseDate) {
+		//returns a number that can be used when a previous release is not available
+		//to give an incrementing variable that we can use to move through the SCTID 02 & 03 files
+		int year = Integer.parseInt(releaseDate.substring(0, 4));
+		int month = Integer.parseInt(releaseDate.substring(4,6));
+		int index = ((year - 2016)*10) + month;
+		return index;
+	}
+	
 }
+
