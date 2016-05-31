@@ -231,15 +231,15 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 			db.runStatement("SET @useRelationshipIds = " + useRelationshipIds);
 			setSubsetIds(newSubsetVersion);
 			
-			long maxOperations = getMaxOperations();
+			long targetOperationCount = getTargetOperationCount();
 			if (onlyHistory) {
-				maxOperations = 250;
+				targetOperationCount = 250;
 			} else if (isExtension) {
-				maxOperations = includeHistory? maxOperations : 388;
+				targetOperationCount = includeHistory? targetOperationCount : 388;
 			} else {
-				maxOperations = includeHistory? maxOperations : 391;
+				targetOperationCount = includeHistory? targetOperationCount : 391;
 			}
-			setMaxOperations(maxOperations);
+			setTargetOperationCount(targetOperationCount);
 
 			completeOutputMap(config);
 			db.runStatement("SET @langCode = '" + config.langCode + "'");
@@ -299,7 +299,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 				doInteractive();
 			}
 		} finally {
-			print("\nProcess " + completionStatus + " in " + stopwatch + " after completing " + getProgress() + "/" + getMaxOperations()
+			print("\nProcess " + completionStatus + " in " + stopwatch + " after completing " + getProgress() + "/" + getTargetOperationCount()
 					+ " operations.");
 			print("Cleaning up resources...");
 			try {

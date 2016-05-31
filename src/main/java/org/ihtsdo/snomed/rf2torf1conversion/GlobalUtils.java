@@ -19,7 +19,7 @@ public class GlobalUtils {
 
 	public static boolean verbose;
 
-	private static long maxOperations = 448;
+	private static long targetOperationCount = 443;
 	private static long queriesRun = 0;
 	private static String BETA_PREFIX = "x";
 
@@ -98,18 +98,18 @@ public class GlobalUtils {
 		return queriesRun;
 	}
 
-	public static long getMaxOperations() {
-		return GlobalUtils.maxOperations;
+	public static long getTargetOperationCount() {
+		return GlobalUtils.targetOperationCount;
 	}
 	
-	synchronized public static void setMaxOperations(long maxOperations) {
-		GlobalUtils.maxOperations = maxOperations;
+	synchronized public static void setTargetOperationCount(long operations) {
+		GlobalUtils.targetOperationCount = operations;
 	}
 
 	synchronized public static void updateProgress() {
 		queriesRun++;
-		if (!verbose && queriesRun <= maxOperations) {
-			double percentageComplete = (((double)queriesRun) / ((double)maxOperations)) * 100d;
+		if (!verbose && queriesRun <= targetOperationCount) {
+			double percentageComplete = (((double)queriesRun) / ((double)targetOperationCount)) * 100d;
 			printn("\r" + String.format("%.2f", percentageComplete) + "% complete.");
 		}
 	}
