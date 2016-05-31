@@ -91,8 +91,6 @@ WHERE characteristicTypeId = @Stated /* Only stated relationships */
 AND r.sourceId = c1.conceptid
 AND r.destinationId = c2.conceptid;
 
--- PARALLEL_END;
-
 CREATE INDEX idx_21t_cid ON rf21_term(CONCEPTID);
 CREATE INDEX idx_21t_did ON rf21_term(descriptionId);
 CREATE INDEX idx_21t_ds ON rf21_term(descriptionStatus);
@@ -205,7 +203,4 @@ d.SNOMEDID = (
 	from rf21_concept c2
 	where c2.conceptid = d.conceptid
 );
-	
 
-
-	
