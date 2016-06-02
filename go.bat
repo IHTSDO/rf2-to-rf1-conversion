@@ -10,7 +10,7 @@ set /p newMemory="How much memory do you have available? [10g]: "
 IF NOT [%newMemory%]==[] SET "memParams=-Xms4g -Xmx%newMemory%"
 
 SET driveParam=
-set /p driveAvailable="Do you have a 2nd drive (eg %secondDrive%) Y/N: "
+set /p driveAvailable="Do you have a 2nd drive? (eg %secondDrive%) Y/N: "
 IF /I "%driveAvailable%"=="Y" SET "driveParam=-u %secondDrive%"
 
 SET newLocation=
