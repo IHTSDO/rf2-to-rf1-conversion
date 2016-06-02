@@ -78,7 +78,7 @@ AND r.destinationId = c2.conceptid;
 
 INSERT INTO rf21_stated_rel
 SELECT
-  null AS RELATIONSHIPID,
+  CASE WHEN @useRelationshipIds = true THEN r.id ELSE null END AS RELATIONSHIPID,
   r.sourceId AS CONCEPTID1,
   r.typeId AS RELATIONSHIPTYPE,
   r.destinationId AS CONCEPTD2,

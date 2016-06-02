@@ -457,6 +457,10 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 				db.executeResource("populate_rf1_int_descriptions.sql");
 			}
 			db.executeResource("populate_rf1_associations.sql");
+			
+			if (useRelationshipIds) {
+				db.executeResource("populate_rf1_rel_ids.sql");
+			}
 		}
 	}
 
