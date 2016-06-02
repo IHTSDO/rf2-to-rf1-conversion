@@ -24,15 +24,18 @@ and covered by the Open Government License http://www.nationalarchives.gov.uk/do
 
 Usage:<code>java -jar [JVM Options] RF2toRF1Converter.jar [Processing Flags] <RF2 international archive location>  [<RF2 extension archive location>]</code>
 
-eg  <code>java -jar -Xmx4g RF2toRF1Converter.jar -h /Backup/SnomedCT_RF2Release_INT_20160131.zip</code>
+eg  <code>java -jar -Xmx8g RF2toRF1Converter.jar /Backup/SnomedCT_RF2Release_INT_20160131.zip</code>
 
-eg <code>java -jar -Xms512m -Xmx4g -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=8080 RF2toRF1Converter.jar -v  -u /Volumes/ram_disk ~/Backup/SnomedCT_RF2Release_INT_20160131.zip ~/Backup/SnomedCT_SpanishRelease-es_INT_20160430.zip </code>
+eg <code>java -jar -Xms512m -Xmx8g -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=8080 RF2toRF1Converter.jar -v  -u /Volumes/ram_disk ~/Backup/SnomedCT_RF2Release_INT_20160131.zip ~/Backup/SnomedCT_SpanishRelease-es_INT_20160430.zip </code>
 
 ### Flags
+-a	Additional files.  Passing a directory path after this flag will cause all the files in that directory to be included in the resulting zip archive.  Some files will be recognised and put in specific subdirectories.
 
--v	Show all queries being run (verbose)
+-b	Beta flag.  Causes an x to be prepended to all content files and the package name (addition files such as documentation are not affected)
 
 -u	Specify location for unzip eg different physical drive to avoid trying to read/write at the same time.
+
+-v	Show all queries being run (verbose)
 
 JVM debugParams<code> -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=8080 </code>
 
@@ -51,13 +54,13 @@ The script will also pass through any command line arguments to the jar file cal
 
 NOTE the use of the -p option which causes relationship ids to be populated is not supported.
 
-<code>go.bat -p g:\incoming\SnomedCT_RF1Release_INT_20160131.zip</code>
+<code>go.bat -b -p g:\incoming\SnomedCT_RF1Release_INT_20160131.zip</code>
 
 <code>How much memory do you have available? [10g]: </code>
 
-<code>Do you have a 2nd drive (eg D:\) Y/N: Y</code>
+<code>Do you have a 2nd drive? (eg D:\) Y/N: Y</code>
 
-<code>Where is the RF2 Archive [G:\incoming\xSnomedCT_RF2Release_INT_20160731.zip]: </code>
+<code>Where is the RF2 Archive? [G:\incoming\xSnomedCT_RF2Release_INT_20160731.zip]: </code>
 
 The full output of running this command is provided here as an example:  https://gist.github.com/pgwilliams/fd35537f49d7581f0e42ae365685c9c6
 
