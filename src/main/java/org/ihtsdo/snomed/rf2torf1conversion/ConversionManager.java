@@ -54,7 +54,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 	String extReleaseDate;
 	boolean includeHistory = true; 
 	boolean includeAllQualifyingRelationships = false;
-	boolean includeLateralityIndicators = false;
+	boolean includeLateralityIndicators = true;  //Laterality is now obligatory
 	boolean isBeta = false;
 	boolean onlyHistory = false;
 	boolean isExtension = false;
@@ -184,7 +184,6 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		//Set Windows Line separator as that's an RF1 standard
 		System.setProperty("line.separator", "\r\n");
 		ConversionManager cm = new ConversionManager();
-		cm.askForLateralityFile();
 		cm.doRf2toRf1Conversion(args);
 	}
 
@@ -202,6 +201,9 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 			intLoadingArea = unzipArchive(intRf2Archive);
 			intReleaseDate = findDateInString(intLoadingArea.listFiles()[0].getName(), false);
 			determineEdition(intLoadingArea, Edition.INTERNATIONAL, intReleaseDate);
+			
+			//Laterality indicators are now obligatory
+			loadLateralityIndicators(intReleaseDate);
 			
 			if (extRf2Archive != null) {
 				print("\nExtracting RF2 Extension Data...");
@@ -614,9 +616,26 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		return attributes;
 	}
 	
-	private void loadLateralityIndicators(File lateralityFile) throws RF1ConversionException {
+	/**
+	 * This is a temporary measure until we can get the Laterality Reference published as a refset.
+	 * at which point it will stop being an external file
+	 */
+	private void loadLateralityIndicators(String releaseDate) throws RF1ConversionException {
+		//International Edition currently limited to January or July Release
+		int year = SnomedUtils.getEffectiveDatePart(releaseDate, EFFECTIVE_DATE_PART_YEAR);
+		int month = SnomedUtils.getEffectiveDatePart(releaseDate, EFFECTIVE_DATE_PART_MONTH);
+		String monthName;
+		if (month == 1) {
+			monthName = "Jan";
+		} else if (month == 7) {
+			monthName = "July";
+		} else {
+			throw new RF1ConversionException ("Unable to determine laterality reference file from release date " + releaseDate + " expected January or July for International Edition");
+		}
+		String lateralityResourceName = "/LateralityReference" + monthName + year + ".txt"; 
+		InputStream lateralityStream = ConversionManager.class.getResourceAsStream(lateralityResourceName);
 		
-		try (BufferedReader br = new BufferedReader(new FileReader(lateralityFile))) {
+		try (BufferedReader br = new BufferedReader(new InputStreamReader(lateralityStream))) {
 			String line;
 			boolean firstLine = true;
 			while ((line = br.readLine()) != null) {
@@ -627,7 +646,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 				}
 			}
 		} catch (IOException ioe) {
-			throw new RF1ConversionException ("Unable to import laterality reference file " + lateralityFile.getAbsolutePath(), ioe);
+			throw new RF1ConversionException ("Unable to import laterality reference file " + lateralityResourceName, ioe);
 		}
 	}
 	
@@ -730,32 +749,6 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		}
 		return filePath;
 	}
-	
-
-	private void askForLateralityFile() {
-		try (Scanner in = new Scanner(System.in)) {
-			print ("Do you wish to create Lateralized Qualifying Relationships? [Y/N]: ");
-			String response = in.nextLine().trim();
-			if (response.toUpperCase().equals("Y")) {
-				print ("Please provide matching laterality reference file location: ");
-				String latFileLPath = in.nextLine().trim();
-				File lateralityFile = new File(latFileLPath);
-				if (!lateralityFile.exists()) {
-					print ("File not found: " + latFileLPath);
-					askForLateralityFile();
-				} else {
-					try{
-						loadLateralityIndicators(lateralityFile);
-						includeLateralityIndicators = true;
-					} catch (Exception e) {
-						print ("Failed to load Laterality text file due to " + e.getMessage());
-						askForLateralityFile();
-					}
-				}
-			}
-		}
-	}
-	
 
 	private void includeAdditionalFiles(File outputDirectory, String releaseDate, EditionConfig editionConfig){
 		Map<String, String> targetLocation = new HashMap<String, String>();
