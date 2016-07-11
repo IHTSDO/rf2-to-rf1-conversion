@@ -466,7 +466,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 
 	private void init(String[] args, File dbLocation) throws RF1ConversionException {
 		if (args.length < 1) {
-			print("Usage: java ConversionManager [-v] [-h] [-b] [-i] [-q] [-a <additional files location>] [-p <previous RF1 archive] [-u <unzip location>] <rf2 archive location> [<rf2 extension archive>]");
+			print("Usage: java ConversionManager [-v] [-h] [-b] [-i] [-a <additional files location>] [-p <previous RF1 archive] [-u <unzip location>] <rf2 archive location> [<rf2 extension archive>]");
 			print("  b - beta indicator, causes an x to be prepended to output filenames");
 			print("  p - previous RF1 archive required for SubsetId and Relationship Id generation");
 			exit();
@@ -492,6 +492,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 			} else if (thisArg.equals("-p")) {
 				isPreviousRF1Location = true;
 			} else if (thisArg.equals("-q")) {
+				//The rule file for generating these relationships is currently incomplete and incorrect.
 				includeAllQualifyingRelationships = true;
 			} else if (isUnzipLocation) {
 				unzipLocation = new File(thisArg);
