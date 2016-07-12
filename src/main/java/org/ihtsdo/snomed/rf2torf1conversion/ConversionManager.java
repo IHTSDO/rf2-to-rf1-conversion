@@ -6,7 +6,6 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -303,6 +302,10 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		} finally {
 			print("\nProcess " + completionStatus + " in " + stopwatch + " after completing " + getProgress() + "/" + getTargetOperationCount()
 					+ " operations.");
+			try {
+				print(RF1Constants.getRelationshipIdUsageSummary());
+			} catch (Exception e){}
+			
 			print("Cleaning up resources...");
 			try {
 				db.shutDown(true); // Also deletes all files
@@ -726,7 +729,6 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 				throw new RF1ConversionException ("Failure while output Laterality Relationships: " + e.toString());
 			}
 	}
-
 
 
 	private String getQualifyingRelationshipFilepath(String releaseDate,

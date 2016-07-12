@@ -29,6 +29,8 @@ public class RF1Constants implements RF1SchemaConstants{
 	//Map of triple+group to SCTID
 	public static Map<String, String> previousRelationships = new HashMap<String, String>();
 	private static BufferedReader availableRelationshipIds;
+	private static int relIdsSkipped = 0;
+	private static int relIdsIssued = 0;
 	
 	private static Map<String, Byte> rf1Map = new HashMap<String, Byte>();
 	static {
@@ -254,8 +256,26 @@ public class RF1Constants implements RF1SchemaConstants{
 				throw new RF1ConversionException("Run out of available relationship SCTIDs.  Contact IHTSDO");
 			}
 			isAvailable = !previousRelationships.containsValue(sctId);
+			if (!isAvailable) {
+				relIdsSkipped++;
+			}
 		}
+		relIdsIssued++;
 		return sctId;
+	}
+	
+	public static String getRelationshipIdUsageSummary() throws IOException {
+		if (availableRelationshipIds == null || !availableRelationshipIds.ready()) {
+			return "";
+		}
+		int relIdsRemaining = 0;
+		while (availableRelationshipIds.readLine() != null) {
+			relIdsRemaining++;
+		}
+		String relSummary = "Relationship Ids Issued: " + relIdsIssued
+				+ "\nRelationship Ids Skipped (already in use): " + relIdsSkipped
+				+ "\nRelationship Ids remaining: " + relIdsRemaining;
+		return relSummary;
 	}
 
 	public static void intialiseAvailableRelationships(InputStream resource) {
