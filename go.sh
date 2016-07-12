@@ -36,7 +36,7 @@ do
 			echo -e "\t d - debug mode, allows IDE to connect on debug port"
 			echo -e "\t H - History, generates JUST the history file"
 			echo -e "\t i - Interactive mode allows sql queries to be run on the temporary database before destruction."
-			echo -e "\t q - Deprecated: produce all qualifying relationships"
+			echo -e "\t p - (NOT SUPPORTED) specify previous RF1 package"
 			echo -e "\t u <location> - Specify location to unzip archives to - good if it's a ramdrive."
 			echo -e "\t v verbose output"
 			exit 0

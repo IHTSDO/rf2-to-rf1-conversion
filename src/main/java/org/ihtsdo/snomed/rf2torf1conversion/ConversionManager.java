@@ -717,7 +717,8 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 								relId = RF1Constants.lookupRelationshipId(thisConcept.getSctId().toString(),
 									LATERALITY_ATTRIB,
 									SIDE_VALUE,
-									UNGROUPED);
+									UNGROUPED,
+									false);  //working with inferred relationship ids
 							}
 							String rf1Line = relId + FIELD_DELIMITER + thisConcept.getSctId() + commonRF1;
 							out.println(rf1Line);
@@ -804,8 +805,11 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 							updateSubsetIds(zis, config);
 						} else if (fileName.contains("sct1_Relationships")) {
 							//We need to use static methods here so that H2 can access as functions.
-							print ("\nLoading previous RF1 relationships");
-							RF1Constants.loadPreviousRelationships(zis);
+							print ("\nLoading previous RF1 inferred relationships");
+							RF1Constants.loadPreviousRelationships(zis, false);
+						}else if (fileName.contains("res1_StatedRelationships")) {
+							print ("\nLoading previous RF1 stated relationships");
+							RF1Constants.loadPreviousRelationships(zis, true);
 						}
 					}
 					ze = zis.getNextEntry();
