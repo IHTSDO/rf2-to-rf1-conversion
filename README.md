@@ -4,13 +4,13 @@ This stand alone RF2 to RF1 converter has been developed to meet the suggested c
 
 ## Scope
 
-This RF2 to RF1 conversion works solely from the data available in an RF2 archive and also introduces some of the restrictions suggested as part of [IHTSDO's RF1 Deprecation Plan](http://www.ihtsdo.org/news-articles/rf1-deprecation-and-withdrawal-of-support-request-for-feedback)..  As such the following restrictions exist:
+This RF2 to RF1 conversion works solely from the data available in an RF2 archive and also introduces some of the restrictions suggested as part of [IHTSDO's RF1 Deprecation Plan](http://www.ihtsdo.org/news-articles/rf1-deprecation-and-withdrawal-of-support-request-for-feedback).  As such the following restrictions exist:
 
 * Qualifying relationships are not included, with the exception of Laterality Qualifying relationships which are optionally generated if a laterality references file can be provided.
 * Refineablity indicator is not being set (0 in all cases).
 * Relationship identifiers have been set to null.
 * The Subset ID is an incrementing integer that's not an SCTID.  As such, it has been set to a number based on the release date to allow for stateless but consistent calculation.
-* Then Subset Version is being incremented by an amount linked to the year and month
+* Then Subset Version is being incremented by an amount linked to the year and month.
 * A unsupported option (-p) has been added whereby the previous RF1 zip file can be specified.  Using this flag will cause relationship IDs to be included and the subset version will be more accurately +1 from the previous version used.
 
 The tools is also currently able to handle the Spanish Edition by specifying an optional additional zip archive.
@@ -19,6 +19,9 @@ The tools is also currently able to handle the Spanish Edition by specifying an 
 
 Based on work by Jeremy Rogers which was marked as Crown Copyright
 and covered by the Open Government License http://www.nationalarchives.gov.uk/doc/open-government-licence/
+
+## Issues
+Please log any issues encountered through the GitHub Issues page:  https://github.com/IHTSDO/rf2-to-rf1-conversion/issues
 
 ## Usage
 
