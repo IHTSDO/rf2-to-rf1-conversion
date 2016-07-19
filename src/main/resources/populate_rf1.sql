@@ -117,19 +117,24 @@ DELETE from rf21_term where conceptid = @SCT_MODEL;
 DELETE from rf21_rel where conceptid1 = @SCT_MODEL;
 DELETE from rf21_stated_rel where conceptid1 = @SCT_MODEL;
 
-UPDATE rf21_rel SET conceptid2 = @SCT_ROOT
+-- Also remove the SCTID of these relationships because in changing it becomes a new relationship
+UPDATE rf21_rel 
+SET conceptid2 = @SCT_ROOT, relationshipid = null
 WHERE conceptid1 =  @SCT_LINKAGE
 AND relationshiptype = @SCT_IS_A;
 
-UPDATE rf21_rel SET conceptid2 = @SCT_SPECIAL
+UPDATE rf21_rel 
+SET conceptid2 = @SCT_SPECIAL, relationshipid = null
 WHERE conceptid1 =  @SCT_NAMESPACE
 AND relationshiptype = @SCT_IS_A;
 
-UPDATE rf21_stated_rel SET conceptid2 = @SCT_ROOT
+UPDATE rf21_stated_rel 
+SET conceptid2 = @SCT_ROOT, relationshipid = null
 WHERE conceptid1 =  @SCT_LINKAGE
 AND relationshiptype = @SCT_IS_A;
 
-UPDATE rf21_stated_rel SET conceptid2 = @SCT_SPECIAL
+UPDATE rf21_stated_rel 
+SET conceptid2 = @SCT_SPECIAL, relationshipid = null
 WHERE conceptid1 =  @SCT_NAMESPACE
 AND relationshiptype = @SCT_IS_A;
 
