@@ -4,7 +4,7 @@
 	<groupId>org.ihtsdo.snomed</groupId>
 	<artifactId>rf2-to-rf1-conversion</artifactId>
 	<packaging>jar</packaging>
-	<version>1.1.6-SNAPSHOT</version>
+	<version>1.1.6</version>
 	<name>rf2-to-rf1-conversion</name>
 	<url>http://maven.apache.org</url>
 	
