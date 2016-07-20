@@ -11,6 +11,10 @@ public interface RF2SchemaConstants {
 	public static final Long ISA_ID = Long.parseLong(ISA);
 	
 	public static final String UNGROUPED = "0";
+	
+	public static int EFFECTIVE_DATE_PART_YEAR = 0;
+	public static int EFFECTIVE_DATE_PART_MONTH = 1;
+	public static int EFFECTIVE_DATE_PART_DAY = 2;
 
 	public static final String CHARACTERISTIC_STATED_SCTID = "900000000000010007";
 	public static final String FIELD_DELIMITER = "\t";

@@ -27,8 +27,11 @@ public class RF1Constants implements RF1SchemaConstants{
 	private static final String DELIM = "_";
 	
 	//Map of triple+group to SCTID
-	public static Map<String, String> previousRelationships = new HashMap<String, String>();
+	public static Map<String, String> previousInferredRelationships = new HashMap<String, String>();
+	public static Map<String, String> previousStatedRelationships = new HashMap<String, String>();
 	private static BufferedReader availableRelationshipIds;
+	private static int relIdsSkipped = 0;
+	private static int relIdsIssued = 0;
 	
 	private static Map<String, Byte> rf1Map = new HashMap<String, Byte>();
 	static {
@@ -233,7 +236,8 @@ public class RF1Constants implements RF1SchemaConstants{
 	}
 	
 	
-	public static String lookupRelationshipId(String source, String type, String destination, String groupNum) throws RF1ConversionException, IOException {
+	public static String lookupRelationshipId(String source, String type, String destination, String groupNum, boolean statedRelationships) throws RF1ConversionException, IOException {
+		Map<String, String> previousRelationships = statedRelationships ? previousStatedRelationships : previousInferredRelationships;
 		String key = source + DELIM + type + DELIM + destination + DELIM + groupNum;
 		//Do we already have an SCTID for this key?
 		if (previousRelationships.containsKey(key)) {
@@ -253,9 +257,28 @@ public class RF1Constants implements RF1SchemaConstants{
 			if (sctId == null) {
 				throw new RF1ConversionException("Run out of available relationship SCTIDs.  Contact IHTSDO");
 			}
-			isAvailable = !previousRelationships.containsValue(sctId);
+			if (previousInferredRelationships.containsValue(sctId) || previousStatedRelationships.containsValue(sctId)) {
+				relIdsSkipped++;
+			} else {
+				isAvailable = true;
+			}
 		}
+		relIdsIssued++;
 		return sctId;
+	}
+	
+	public static String getRelationshipIdUsageSummary() throws IOException {
+		if (availableRelationshipIds == null || !availableRelationshipIds.ready()) {
+			return "";
+		}
+		int relIdsRemaining = 0;
+		while (availableRelationshipIds.readLine() != null) {
+			relIdsRemaining++;
+		}
+		String relSummary = "Relationship Ids Issued: " + relIdsIssued
+				+ "\nRelationship Ids Skipped (already in use): " + relIdsSkipped
+				+ "\nRelationship Ids remaining: " + relIdsRemaining;
+		return relSummary;
 	}
 
 	public static void intialiseAvailableRelationships(InputStream resource) {
@@ -266,7 +289,7 @@ public class RF1Constants implements RF1SchemaConstants{
 	 * Stores the previous relationships in a map of triple+group to sctid, so they can 
 	 * be used for reconciliation or augmented with relationships from available_sctids_partition_02
 	 */
-	public static void loadPreviousRelationships(ZipInputStream zis) throws IOException {
+	public static void loadPreviousRelationships(ZipInputStream zis, boolean statedRelationships) throws IOException {
 
 		String line;
 		boolean isFirstLine = true;
@@ -282,7 +305,11 @@ public class RF1Constants implements RF1SchemaConstants{
 									+ lineItems[RF1_IDX_RELATIONSHIPTYPE] + DELIM
 									+ lineItems[RF1_IDX_CONCEPTID2] + DELIM
 									+ lineItems[RF1_IDX_RELATIONSHIPGROUP];
-			previousRelationships.put(triplePlusGroup, lineItems[RF1_IDX_RELATIONSHIPID]);
+			if (statedRelationships) {
+				previousStatedRelationships.put(triplePlusGroup, lineItems[RF1_IDX_RELATIONSHIPID]);
+			} else {
+				previousInferredRelationships.put(triplePlusGroup, lineItems[RF1_IDX_RELATIONSHIPID]);
+			}
 		}
 		
 	}

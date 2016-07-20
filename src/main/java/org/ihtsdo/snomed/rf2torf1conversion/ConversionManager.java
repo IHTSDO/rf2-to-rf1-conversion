@@ -6,7 +6,6 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -54,7 +53,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 	String extReleaseDate;
 	boolean includeHistory = true; 
 	boolean includeAllQualifyingRelationships = false;
-	boolean includeLateralityIndicators = false;
+	boolean includeLateralityIndicators = true;  //Laterality is now obligatory
 	boolean isBeta = false;
 	boolean onlyHistory = false;
 	boolean isExtension = false;
@@ -184,7 +183,6 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		//Set Windows Line separator as that's an RF1 standard
 		System.setProperty("line.separator", "\r\n");
 		ConversionManager cm = new ConversionManager();
-		cm.askForLateralityFile();
 		cm.doRf2toRf1Conversion(args);
 	}
 
@@ -202,6 +200,9 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 			intLoadingArea = unzipArchive(intRf2Archive);
 			intReleaseDate = findDateInString(intLoadingArea.listFiles()[0].getName(), false);
 			determineEdition(intLoadingArea, Edition.INTERNATIONAL, intReleaseDate);
+			
+			//Laterality indicators are now obligatory
+			loadLateralityIndicators(intReleaseDate);
 			
 			if (extRf2Archive != null) {
 				print("\nExtracting RF2 Extension Data...");
@@ -301,6 +302,10 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		} finally {
 			print("\nProcess " + completionStatus + " in " + stopwatch + " after completing " + getProgress() + "/" + getTargetOperationCount()
 					+ " operations.");
+			try {
+				print(RF1Constants.getRelationshipIdUsageSummary());
+			} catch (Exception e){}
+			
 			print("Cleaning up resources...");
 			try {
 				db.shutDown(true); // Also deletes all files
@@ -466,7 +471,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 
 	private void init(String[] args, File dbLocation) throws RF1ConversionException {
 		if (args.length < 1) {
-			print("Usage: java ConversionManager [-v] [-h] [-b] [-i] [-q] [-a <additional files location>] [-p <previous RF1 archive] [-u <unzip location>] <rf2 archive location> [<rf2 extension archive>]");
+			print("Usage: java ConversionManager [-v] [-h] [-b] [-i] [-a <additional files location>] [-p <previous RF1 archive] [-u <unzip location>] <rf2 archive location> [<rf2 extension archive>]");
 			print("  b - beta indicator, causes an x to be prepended to output filenames");
 			print("  p - previous RF1 archive required for SubsetId and Relationship Id generation");
 			exit();
@@ -492,6 +497,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 			} else if (thisArg.equals("-p")) {
 				isPreviousRF1Location = true;
 			} else if (thisArg.equals("-q")) {
+				//The rule file for generating these relationships is currently incomplete and incorrect.
 				includeAllQualifyingRelationships = true;
 			} else if (isUnzipLocation) {
 				unzipLocation = new File(thisArg);
@@ -613,9 +619,26 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		return attributes;
 	}
 	
-	private void loadLateralityIndicators(File lateralityFile) throws RF1ConversionException {
+	/**
+	 * This is a temporary measure until we can get the Laterality Reference published as a refset.
+	 * at which point it will stop being an external file
+	 */
+	private void loadLateralityIndicators(String releaseDate) throws RF1ConversionException {
+		//International Edition currently limited to January or July Release
+		int year = SnomedUtils.getEffectiveDatePart(releaseDate, EFFECTIVE_DATE_PART_YEAR);
+		int month = SnomedUtils.getEffectiveDatePart(releaseDate, EFFECTIVE_DATE_PART_MONTH);
+		String monthName;
+		if (month == 1) {
+			monthName = "Jan";
+		} else if (month == 7) {
+			monthName = "July";
+		} else {
+			throw new RF1ConversionException ("Unable to determine laterality reference file from release date " + releaseDate + " expected January or July for International Edition");
+		}
+		String lateralityResourceName = "/LateralityReference" + monthName + year + ".txt"; 
+		InputStream lateralityStream = ConversionManager.class.getResourceAsStream(lateralityResourceName);
 		
-		try (BufferedReader br = new BufferedReader(new FileReader(lateralityFile))) {
+		try (BufferedReader br = new BufferedReader(new InputStreamReader(lateralityStream))) {
 			String line;
 			boolean firstLine = true;
 			while ((line = br.readLine()) != null) {
@@ -626,7 +649,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 				}
 			}
 		} catch (IOException ioe) {
-			throw new RF1ConversionException ("Unable to import laterality reference file " + lateralityFile.getAbsolutePath(), ioe);
+			throw new RF1ConversionException ("Unable to import laterality reference file " + lateralityResourceName, ioe);
 		}
 	}
 	
@@ -694,7 +717,8 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 								relId = RF1Constants.lookupRelationshipId(thisConcept.getSctId().toString(),
 									LATERALITY_ATTRIB,
 									SIDE_VALUE,
-									UNGROUPED);
+									UNGROUPED,
+									false);  //working with inferred relationship ids
 							}
 							String rf1Line = relId + FIELD_DELIMITER + thisConcept.getSctId() + commonRF1;
 							out.println(rf1Line);
@@ -706,7 +730,6 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 				throw new RF1ConversionException ("Failure while output Laterality Relationships: " + e.toString());
 			}
 	}
-
 
 
 	private String getQualifyingRelationshipFilepath(String releaseDate,
@@ -729,32 +752,6 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		}
 		return filePath;
 	}
-	
-
-	private void askForLateralityFile() {
-		try (Scanner in = new Scanner(System.in)) {
-			print ("Do you wish to create Lateralized Qualifying Relationships? [Y/N]: ");
-			String response = in.nextLine().trim();
-			if (response.toUpperCase().equals("Y")) {
-				print ("Please provide matching laterality reference file location: ");
-				String latFileLPath = in.nextLine().trim();
-				File lateralityFile = new File(latFileLPath);
-				if (!lateralityFile.exists()) {
-					print ("File not found: " + latFileLPath);
-					askForLateralityFile();
-				} else {
-					try{
-						loadLateralityIndicators(lateralityFile);
-						includeLateralityIndicators = true;
-					} catch (Exception e) {
-						print ("Failed to load Laterality text file due to " + e.getMessage());
-						askForLateralityFile();
-					}
-				}
-			}
-		}
-	}
-	
 
 	private void includeAdditionalFiles(File outputDirectory, String releaseDate, EditionConfig editionConfig){
 		Map<String, String> targetLocation = new HashMap<String, String>();
@@ -808,8 +805,11 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 							updateSubsetIds(zis, config);
 						} else if (fileName.contains("sct1_Relationships")) {
 							//We need to use static methods here so that H2 can access as functions.
-							print ("\nLoading previous RF1 relationships");
-							RF1Constants.loadPreviousRelationships(zis);
+							print ("\nLoading previous RF1 inferred relationships");
+							RF1Constants.loadPreviousRelationships(zis, false);
+						}else if (fileName.contains("res1_StatedRelationships")) {
+							print ("\nLoading previous RF1 stated relationships");
+							RF1Constants.loadPreviousRelationships(zis, true);
 						}
 					}
 					ze = zis.getNextEntry();
