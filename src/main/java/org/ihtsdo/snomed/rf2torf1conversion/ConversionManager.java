@@ -5,6 +5,7 @@ import static org.ihtsdo.snomed.rf2torf1conversion.GlobalUtils.*;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -26,6 +27,7 @@ import java.nio.file.Paths;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.ihtsdo.snomed.rf2torf1conversion.pojo.Concept;
 import org.ihtsdo.snomed.rf2torf1conversion.pojo.ConceptDeserializer;
 import org.ihtsdo.snomed.rf2torf1conversion.pojo.LateralityIndicator;
@@ -74,6 +76,8 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 	private Long[] subsetIds;
 	private Long maxPreviousSubsetId = null;
 	private int  previousSubsetVersion = 29;  //Taken from 20160131 RF1 International Release
+	private static final String RELEASE_NOTES = "SnomedCTReleaseNotes";
+	private static final String DOCUMENTATION_DIR = "Documentation/";
 	
 	enum Edition { INTERNATIONAL, SPANISH };
 	
@@ -191,7 +195,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		init(args, tempDBLocation);
 		createDatabaseSchema();
 		File intLoadingArea = null;
-		File extloadingArea = null;
+		File extLoadingArea = null;
 		File exportArea = null;
 		Stopwatch stopwatch = Stopwatch.createStarted();
 		String completionStatus = "failed";
@@ -206,12 +210,13 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 			
 			if (extRf2Archive != null) {
 				print("\nExtracting RF2 Extension Data...");
-				extloadingArea = unzipArchive(extRf2Archive);
-				extReleaseDate = findDateInString(extloadingArea.listFiles()[0].getName(), false);
-				determineEdition(extloadingArea, null, extReleaseDate);	
+				extLoadingArea = unzipArchive(extRf2Archive);
+				extReleaseDate = findDateInString(extLoadingArea.listFiles()[0].getName(), false);
+				determineEdition(extLoadingArea, null, extReleaseDate);	
 				isExtension = true;
 			}
 			String releaseDate = isExtension ? extReleaseDate : intReleaseDate;
+			File loadingArea = isExtension ? extLoadingArea : intLoadingArea;
 			int releaseIndex = calculateReleaseIndex(releaseDate);
 			EditionConfig config = knownEditionMap.get(edition);
 			int newSubsetVersion = 0;
@@ -250,7 +255,6 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 			loadRF2Data(intLoadingArea,  Edition.INTERNATIONAL, intReleaseDate, intfileToTable);
 			
 			//Load the rest of the files from the same loading area if International Release, otherwise use the extensionLoading  Area
-			File loadingArea = isExtension ? extloadingArea : intLoadingArea;
 			print("\nLoading " + edition +" RF2 Data...");
 			loadRF2Data(loadingArea, edition, releaseDate, extfileToTable);				
 
@@ -287,8 +291,13 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 				generateLateralityRelationships(filePath);
 			}
 			
+			boolean documentationIncluded = false;
 			if (additionalFilesLocation != null) {
-				includeAdditionalFiles(exportArea, releaseDate, knownEditionMap.get(edition));
+				documentationIncluded = includeAdditionalFiles(exportArea, releaseDate, knownEditionMap.get(edition));
+			}
+			
+			if (!documentationIncluded) {
+				pullDocumentationFromRF2(loadingArea, exportArea);
 			}
 			
 			print("\nZipping archive");
@@ -320,8 +329,8 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 					FileUtils.deleteDirectory(intLoadingArea);
 				}
 				
-				if (extloadingArea != null && extloadingArea.exists()) {
-					FileUtils.deleteDirectory(extloadingArea);
+				if (extLoadingArea != null && extLoadingArea.exists()) {
+					FileUtils.deleteDirectory(extLoadingArea);
 				}
 
 				if (exportArea != null && exportArea.exists()) {
@@ -428,8 +437,9 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 			throw new RF1ConversionException("Unable to create temporary directory for archive extration");
 		}
 		// We only need to work with the full files
-		//...mostly, we also need the Snapshot Relationship file in order to work out the Qualifying Relationships
-		unzipFlat(archive, tempDir, new String[]{"Full","sct2_Relationship_Snapshot"});
+		// ...mostly, we also need the Snapshot Relationship file in order to work out the Qualifying Relationships
+		// Also we'll take the documentation pdf
+		unzipFlat(archive, tempDir, new String[]{"Full","sct2_Relationship_Snapshot",RELEASE_NOTES});
 		
 		return tempDir;
 	}
@@ -753,9 +763,10 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		return filePath;
 	}
 
-	private void includeAdditionalFiles(File outputDirectory, String releaseDate, EditionConfig editionConfig){
+	private boolean includeAdditionalFiles(File outputDirectory, String releaseDate, EditionConfig editionConfig){
 		Map<String, String> targetLocation = new HashMap<String, String>();
-		targetLocation.put(".pdf", "Documentation/");
+		boolean documentationIncluded = false;
+		targetLocation.put(".pdf", DOCUMENTATION_DIR);
 		targetLocation.put("KeyIndex_", "Resources/Indexes/");
 		targetLocation.put("Canonical", "Resources/Canonical Table/");
 		String rootPath = outputDirectory.getAbsolutePath() 
@@ -784,11 +795,15 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 				try {
 					FileUtils.copyFile(child, copiedFile);
 					print ("Copied additional file to " + copiedFile.getAbsolutePath());
+					if (copiedFile.getName().contains(RELEASE_NOTES)) {
+						documentationIncluded = true;
+					}
 				} catch (IOException e) {
 					print ("Unable to copy additional file " + childFilename + " due to " + e.getMessage());
 				}
 			}
 		}
+		return documentationIncluded;
 	}
 
 
@@ -915,5 +930,19 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		return index;
 	}
 	
+
+	private void pullDocumentationFromRF2(File loadingArea, File exportArea) {
+		FileFilter fileFilter = new WildcardFileFilter("*" + RELEASE_NOTES + "*");
+		File[] files = loadingArea.listFiles(fileFilter);
+		String destDir = exportArea.getAbsolutePath() + File.separator + DOCUMENTATION_DIR + File.separator;
+		for (File file : files) {
+			try{
+				File destFile = new File (destDir + file.getName());
+				FileUtils.copyFile(file, destFile);
+			} catch (IOException e) {
+				debug ("Failed to copy "  + file +  " to destination area: " + e.toString());
+			}
+		}
+	}
 }
 
