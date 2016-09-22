@@ -6,12 +6,12 @@ This stand alone RF2 to RF1 converter has been developed to meet the suggested c
 
 This RF2 to RF1 conversion works solely from the data available in an RF2 archive and also introduces some of the restrictions suggested as part of [IHTSDO's RF1 Deprecation Plan](http://www.ihtsdo.org/news-articles/rf1-deprecation-and-withdrawal-of-support-request-for-feedback).  As such the following restrictions exist:
 
-* Qualifying relationships are not included, with the exception of Laterality Qualifying relationships which are optionally generated if a laterality references file can be provided.
+* Qualifying relationships are not included, with the exception of Laterality Qualifying relationships which are always generated.  The reference data required to support Laterality Relationships are included in the tool for 2016 and will be taken from a Laterality Refset included in the International Edition from 2017 onwards.
 * Refineablity indicator is not being set (0 in all cases).
 * Relationship identifiers have been set to null.
 * The Subset ID is an incrementing integer that's not an SCTID.  As such, it has been set to a number based on the release date to allow for stateless but consistent calculation.
 * Then Subset Version is being incremented by an amount linked to the year and month.
-* A unsupported option (-p) has been added whereby the previous RF1 zip file can be specified.  Using this flag will cause relationship IDs to be included and the subset version will be more accurately +1 from the previous version used.
+* A unsupported option (-p) has been added whereby the previous RF1 zip file can be specified.  Using this flag will cause relationship IDs to be included and the subset version will be more accurately calculated (ie +1) from the previous version used.
 
 The tools is also currently able to handle the Spanish Edition by specifying an optional additional zip archive.
 
@@ -36,7 +36,7 @@ eg <code>java -jar -Xms512m -Xmx8g -Xdebug -Xrunjdwp:transport=dt_socket,server=
 
 -b	Beta flag.  Causes an x to be prepended to all content files and the package name (addition files such as documentation are not affected)
 
--u	Specify location for unzip eg different physical drive to avoid trying to read/write at the same time.
+-u	Specify location for unzip eg different physical drive (or, optimally, a ram drive) to avoid trying to read/write at the same time.
 
 -v	Show all queries being run (verbose)
 
