@@ -5,6 +5,7 @@ public interface RF2SchemaConstants {
 	public final Long SNOMED_ROOT_CONCEPT = 138875005L;
 	public final String ADDITIONAL_RELATIONSHIP = "900000000000227009";
 	public final String LATERALITY_ATTRIB = "272741003";
+	public final String LATERALITY_REFSET_ID = "703870008";
 	public final String SIDE_VALUE = "182353008";	
 	// id effectiveTime active moduleId sourceId destinationId relationshipGroup typeId characteristicTypeId modifierId
 	public static final String ISA = "116680003";
@@ -55,6 +56,15 @@ public interface RF2SchemaConstants {
 	public static final int DES_IDX_TYPEID = 6;
 	public static final int DES_IDX_TERM = 7;
 	public static final int DES_IDX_CASESIGNIFICANCEID = 8;
+	
+	// Simple Refset columns
+	// id effectiveTime active moduleId refsetId referencedComponentId
+	public static final int SIMP_IDX_ID = 0;
+	public static final int SIMP_IDX_EFFECTIVETIME = 1;
+	public static final int SIMP_IDX_ACTIVE = 2;
+	public static final int SIMP_IDX_MODULID = 3;
+	public static final int SIMP_IDX_REFSETID = 4;
+	public static final int SIMP_IDX_REFCOMPID = 5;
 
 	public static final String FULLY_DEFINED_SCTID = "900000000000073002";
 	public static final String FULLY_SPECIFIED_NAME = "900000000000003001";
