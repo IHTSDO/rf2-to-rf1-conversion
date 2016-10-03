@@ -256,7 +256,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 			
 			//Load the rest of the files from the same loading area if International Release, otherwise use the extensionLoading  Area
 			print("\nLoading " + edition +" RF2 Data...");
-			loadRF2Data(loadingArea, edition, releaseDate, extfileToTable);				
+			loadRF2Data(loadingArea, edition, releaseDate, extfileToTable);
 
 			debug("\nCreating RF2 indexes...");
 			db.executeResource("create_rf2_indexes.sql");
@@ -274,7 +274,9 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 			exportRF1Data(intExportMap, releaseDate, intReleaseDate, knownEditionMap.get(edition), exportArea);
 			exportRF1Data(extExportMap, releaseDate, releaseDate, knownEditionMap.get(edition), exportArea);
 
-			String filePath = getQualifyingRelationshipFilepath(releaseDate, knownEditionMap.get(edition), exportArea);
+			//Relationship file uses the international release date, even for extensions.  Well, the Spanish one anyway.
+			//But we also need the extension release date for the top level directory
+			String filePath = getQualifyingRelationshipFilepath(intReleaseDate, extReleaseDate, knownEditionMap.get(edition), exportArea);
 			if (includeAllQualifyingRelationships || includeLateralityIndicators) {
 				print("\nLoading Inferred Relationship Hierarchy for Qualifying Relationship computation...");
 				loadRelationshipHierarchy(intLoadingArea);
@@ -297,7 +299,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 			}
 			
 			if (!documentationIncluded) {
-				pullDocumentationFromRF2(loadingArea, exportArea);
+				pullDocumentationFromRF2(loadingArea, exportArea, releaseDate, knownEditionMap.get(edition));
 			}
 			
 			print("\nZipping archive");
@@ -742,11 +744,12 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 	}
 
 
-	private String getQualifyingRelationshipFilepath(String releaseDate,
-			EditionConfig editionConfig, File exportArea) throws RF1ConversionException {
-		// Replace DATE in the filename with the actual release date
-		String fileName = RELATIONSHIP_FILENAME.replaceFirst(DATE, releaseDate)
-				.replace(DATE, releaseDate)
+	private String getQualifyingRelationshipFilepath(String intReleaseDate,
+			String extReleaseDate, EditionConfig editionConfig, File exportArea) throws RF1ConversionException {
+		// Replace the top level Date with the Extension Date, and the 
+		// Relationship file with the extension release date
+		String fileName = RELATIONSHIP_FILENAME.replaceFirst(DATE, extReleaseDate)
+				.replace(DATE, intReleaseDate)
 				.replace(OUT, editionConfig.outputName)
 				.replace(LNG, editionConfig.langCode);
 		fileName = modifyFilenameIfBeta(fileName);
@@ -769,14 +772,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		targetLocation.put(".pdf", DOCUMENTATION_DIR);
 		targetLocation.put("KeyIndex_", "Resources/Indexes/");
 		targetLocation.put("Canonical", "Resources/Canonical Table/");
-		String rootPath = outputDirectory.getAbsolutePath() 
-						+ File.separator 
-						+ (isBeta?BETA_PREFIX:"")
-						+ outputFolderTemplate  
-						+ File.separator;
-		rootPath = rootPath.replace(OUT, editionConfig.outputName)
-							.replace(DATE, releaseDate);
-
+		String rootPath = getOutputRootPath(outputDirectory, releaseDate, editionConfig);
 		File[] directoryListing = additionalFilesLocation.listFiles();
 		if (directoryListing != null) {
 			for (File child : directoryListing) {
@@ -806,6 +802,18 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		return documentationIncluded;
 	}
 
+
+	private String getOutputRootPath(File outputDirectory, String releaseDate,
+			EditionConfig editionConfig) {
+		String rootPath = outputDirectory.getAbsolutePath() 
+			+ File.separator 
+			+ (isBeta?BETA_PREFIX:"")
+			+ outputFolderTemplate  
+			+ File.separator;
+		rootPath = rootPath.replace(OUT, editionConfig.outputName)
+			.replace(DATE, releaseDate);
+		return rootPath;
+	}
 
 	private void loadPreviousRF1(EditionConfig config) throws RF1ConversionException {
 		try {
@@ -931,10 +939,11 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 	}
 	
 
-	private void pullDocumentationFromRF2(File loadingArea, File exportArea) {
+	private void pullDocumentationFromRF2(File loadingArea, File exportArea, String releaseDate, EditionConfig editionConfig) {
 		FileFilter fileFilter = new WildcardFileFilter("*" + RELEASE_NOTES + "*");
 		File[] files = loadingArea.listFiles(fileFilter);
-		String destDir = exportArea.getAbsolutePath() + File.separator + DOCUMENTATION_DIR + File.separator;
+		String outputRootPath = getOutputRootPath(exportArea, releaseDate, editionConfig);
+		String destDir = outputRootPath + File.separator + DOCUMENTATION_DIR + File.separator;
 		for (File file : files) {
 			try{
 				File destFile = new File (destDir + file.getName());

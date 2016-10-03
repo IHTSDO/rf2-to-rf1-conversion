@@ -100,15 +100,13 @@ AND NOT t.DESC_TYPE = 3
 AND t.languageCode = @intLangCode;
 
 --Where term is has inactivation reason, set the description status
--- but only where the description is not actually active
 UPDATE rf21_term t
 SET t.DESCRIPTIONSTATUS = COALESCE (
-	select magicNumberFor(max(s.linkedComponentId))
+	select magicNumberFor(s.linkedComponentId)
 	from rf2_crefset s
 	where s.referencedComponentId = t.descriptionid
 	and s.refSetId = @DInactivationRefSet
-	AND s.active = 1,t.descriptionstatus)
-WHERE t.descriptionstatus <> 0;
+	AND s.active = 1,t.descriptionstatus);
 
 -- Where the concept has limited status (6), and the description is otherwise active,
 -- the description should also have status 6.
@@ -119,6 +117,17 @@ WHERE EXISTS (
 	WHERE t.conceptid = c.conceptid
 	AND c.conceptstatus = 6 )
 and t.descriptionstatus = 0;
+
+-- Where the description has a REFERS_TO attribute, the status should be 7 - Inappropriate
+SET @RefersToRefset = '900000000000531004';
+UPDATE rf21_term t
+SET t.DESCRIPTIONSTATUS = 7
+WHERE EXISTS (
+	SELECT 1 FROM rf2_crefset s
+	where t.descriptionid = s.referencedComponentId
+	and s.refsetId = @RefersToRefset
+	and s.active = 1)
+AND t.DESCRIPTIONSTATUS = 1;
 
 -- Where the concept is non current (ie status 1, 2, 3, 4, 5, or 10) then
 -- the description takes status 8

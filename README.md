@@ -49,6 +49,9 @@ An example of the command used to create the 20160731 release is:
 
 <code>./go.sh -a /Users/Peter/tmp/additionalFiles/ -u /Volumes/ram_disk/ <code>
 
+The beta for the Spanish Edition was produced with: 
+<code>./go.sh -u /Volumes/ram_disk/ -b -a ~/tmp/es_additionalFiles/ -v<code>
+
 ### Running on a Windows PC
 A script file go.bat has been provided to simplify the crafting of the java jar file call with a large number of parameters. This script asks a number of questions, some of which have a default (just press return to accept the default).
  
