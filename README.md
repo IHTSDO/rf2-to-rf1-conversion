@@ -9,11 +9,10 @@ This RF2 to RF1 conversion works solely from the data available in an RF2 archiv
 * Qualifying relationships are not included, with the exception of Laterality Qualifying relationships which are always generated.  The reference data required to support Laterality Relationships are included in the tool for 2016 and will be taken from a Laterality Refset included in the International Edition from 2017 onwards.
 * Refineablity indicator is not being set (0 in all cases).
 * Relationship identifiers have been set to null.
-* The Subset ID is an incrementing integer that's not an SCTID.  As such, it has been set to a number based on the release date to allow for stateless but consistent calculation.
 * Then Subset Version is being incremented by an amount linked to the year and month.
 * A unsupported option (-p) has been added whereby the previous RF1 zip file can be specified.  Using this flag will cause relationship IDs to be included and the subset version will be more accurately calculated (ie +1) from the previous version used.
 
-The tools is also currently able to handle the Spanish Edition by specifying an optional additional zip archive.
+The tool is also currently able to handle the Spanish Edition by specifying an optional additional zip archive.
 
 ## Licence and Acknowledgements
 
@@ -47,10 +46,10 @@ A script file go.sh has been provided to simplify the crafting of the java jar f
 
 An example of the command used to create the 20160731 release is:
 
-<code>./go.sh -a /Users/Peter/tmp/additionalFiles/ -u /Volumes/ram_disk/ <code>
+<code>./go.sh -a /Users/Peter/tmp/additionalFiles/ -u /Volumes/ram_disk/ </code>
 
 The beta for the Spanish Edition was produced with: 
-<code>./go.sh -u /Volumes/ram_disk/ -b -a ~/tmp/es_additionalFiles/ -v<code>
+<code>./go.sh -u /Volumes/ram_disk/ -b -a ~/tmp/es_additionalFiles/ -v</code>
 
 ### Running on a Windows PC
 A script file go.bat has been provided to simplify the crafting of the java jar file call with a large number of parameters. This script asks a number of questions, some of which have a default (just press return to accept the default).
