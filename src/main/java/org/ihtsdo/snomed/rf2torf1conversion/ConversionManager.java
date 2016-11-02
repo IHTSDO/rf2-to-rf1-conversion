@@ -203,6 +203,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 			print("\nExtracting RF2 International Edition Data...");
 			intLoadingArea = unzipArchive(intRf2Archive);
 			intReleaseDate = findDateInString(intLoadingArea.listFiles()[0].getName(), false);
+			extReleaseDate = intReleaseDate;
 			determineEdition(intLoadingArea, Edition.INTERNATIONAL, intReleaseDate);
 			
 			//Laterality indicators are now obligatory
