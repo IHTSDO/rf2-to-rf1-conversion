@@ -22,6 +22,16 @@ and covered by the Open Government License http://www.nationalarchives.gov.uk/do
 ## Issues
 Please log any issues encountered through the GitHub Issues page:  https://github.com/IHTSDO/rf2-to-rf1-conversion/issues
 
+## Building
+
+Build the tool (a java jar file) using the command:
+<code>mvn clean package</code>
+
+You'll need to have installed Maven on your computer for this to work.
+Once the self contained jar file has been created, it can either be transferred to another location to run, or called directly eg 
+
+<code>java -jar  target/RF2toRF1Converter.jar  ~/Backup/SnomedCT_RF2Release_INT_20160731.zip</code>
+
 ## Usage
 
 Usage:<code>java -jar [JVM Options] RF2toRF1Converter.jar [Processing Flags] <RF2 international archive location>  [<RF2 extension archive location>]</code>
