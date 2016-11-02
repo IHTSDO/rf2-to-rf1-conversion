@@ -99,6 +99,8 @@ WHERE EXISTS (
 AND NOT t.DESC_TYPE = 3
 AND t.languageCode = @intLangCode;
 
+SELECT 'one', rf21_term.* from rf21_term where descriptionid = 1510949018;
+
 --Where term is has inactivation reason, set the description status
 UPDATE rf21_term t
 SET t.DESCRIPTIONSTATUS = COALESCE (
@@ -107,16 +109,17 @@ SET t.DESCRIPTIONSTATUS = COALESCE (
 	where s.referencedComponentId = t.descriptionid
 	and s.refSetId = @DInactivationRefSet
 	AND s.active = 1,t.descriptionstatus);
+	
+SELECT 'two', rf21_term.* from rf21_term where descriptionid = 1510949018;
 
--- Where the concept has limited status (6), and the description is otherwise active,
--- the description should also have status 6.
+-- Where the concept has limited status (6), the description should too
 UPDATE rf21_term t
 SET t.DESCRIPTIONSTATUS = 6
 WHERE EXISTS (
 	SELECT 1 FROM rf21_concept c
 	WHERE t.conceptid = c.conceptid
 	AND c.conceptstatus = 6 )
-and t.descriptionstatus = 0;
+AND t.DESCRIPTIONSTATUS = 8;
 
 -- Where the description has a REFERS_TO attribute, the status should be 7 - Inappropriate
 SET @RefersToRefset = '900000000000531004';
@@ -129,15 +132,17 @@ WHERE EXISTS (
 	and s.active = 1)
 AND t.DESCRIPTIONSTATUS = 1;
 
--- Where the concept is non current (ie status 1, 2, 3, 4, 5, or 10) then
--- the description takes status 8
+SELECT 'three', rf21_term.* from rf21_term where descriptionid = 1510949018;
+
+--- Where the concept is non current (ie status 1, 2, 3, 4, 5, or 10) then
+--- the description takes status 8
 UPDATE rf21_term t
 SET t.DESCRIPTIONSTATUS = 8
 WHERE EXISTS (
    SELECT 1 from rf21_concept c
    WHERE t.conceptid = c.conceptid
    AND c.conceptStatus in (1, 2, 3, 4, 5, 10))
-AND t.DESCRIPTIONSTATUS = 0;
+AND t.DESCRIPTIONSTATUS in (0,6);
 
 -- TODO REMOVE THIS TWEAK once TCs are happy with the basic process
 -- When a description is inactive and the langrefset line that made it preferred

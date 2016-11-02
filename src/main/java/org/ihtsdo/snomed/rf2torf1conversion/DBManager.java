@@ -47,7 +47,8 @@ public class DBManager {
 		/*
 		 * if (parallelMode == true) { throw new
 		 * RF1ConversionException("Cannot start parallel processing while existing parallel processes exist."); }
-		 * print("\nStarting Parallel Processing"); parallelMode = true; executor = Executors.newFixedThreadPool(threadCount);
+		 * print("\nStarting Parallel Processing"); parallelMode = true; 
+		 * executor = Executors.newFixedThreadPool(threadCount);
 		 */
 	}
 

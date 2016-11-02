@@ -31,7 +31,7 @@ WHERE NOT EXISTS (
 	WHERE c.id = t.conceptid
 	AND t.typeid = @FSN
 	AND (  (moduleId =  @MetadataModule AND t.term like '%metadata concept)')
-	 OR t.term like '%metadato del núcleo)' )
+	 OR t.term like '%metadato del núcleo)' OR t.term like '%(metadato fundacional)' )
 );
 
 CREATE UNIQUE INDEX CONCEPT_CUI_X ON rf21_concept(CONCEPTID);
