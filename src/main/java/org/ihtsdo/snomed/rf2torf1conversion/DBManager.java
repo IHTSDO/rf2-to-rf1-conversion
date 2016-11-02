@@ -17,8 +17,6 @@ import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.IOUtils;
 import org.h2.jdbcx.JdbcConnectionPool;
@@ -29,7 +27,8 @@ import com.google.common.io.Resources;
 public class DBManager {
 
 	private static final String DB_DRIVER = "org.h2.Driver";
-	private static final String DB_OPTIONS = "MULTI_THREADED=0;LOG=0;CACHE_SIZE=1048576;LOCK_MODE=3";
+	//private static final String DB_OPTIONS = "MULTI_THREADED=0;LOG=0;CACHE_SIZE=1048576;LOCK_MODE=3";
+	private static final String DB_OPTIONS = "";
 	private static final String DEFAULT_FILE_SEPARATOR = "/";
 	private static final String SQL_DELIMITER = ";";
 
