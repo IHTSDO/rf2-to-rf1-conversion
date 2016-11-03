@@ -56,7 +56,7 @@ eg <code>java -jar -Xms512m -Xmx8g -Xdebug -Xrunjdwp:transport=dt_socket,server=
 
 JVM debugParams<code> -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=8080 </code>
 
-### Running on a MAC
+### Running on a MAC / Unix (tested with Ubuntu)
 A script file go.sh has been provided to simplify the crafting of the java jar file call with a large number of parameters.   This script should be edited as required to suit the location of the various files on the user's own machine.
 
 An example of the command used to create the 20160731 release is:
