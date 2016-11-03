@@ -22,6 +22,11 @@ and covered by the Open Government License http://www.nationalarchives.gov.uk/do
 ## Issues
 Please log any issues encountered through the GitHub Issues page:  https://github.com/IHTSDO/rf2-to-rf1-conversion/issues
 
+## System Requirements
+
+* Java Runtime Environment (make sure to get 64bit).  Download from http://www.oracle.com/technetwork/java/javase/downloads/index.html
+* Suggested Memory - 8Gb.   It scraped through with 6Gb.  Jury is still out on 4Gb.
+
 ## Building
 
 Build the tool (a java jar file) using the command:
@@ -71,7 +76,7 @@ to
 
 The script will also pass through any command line arguments to the jar file call so for example it could be called as follows:
 
-NOTE the use of the -p option which causes relationship ids to be populated is not supported.
+NOTE the use of the -p option which causes relationship ids to be populated is not recommended and it was not the intention of the IHTSDO to offer this facility as stated in the RF1 Deprecation documentation.   It should work, however.
 
 <code>go.bat -b -p g:\incoming\SnomedCT_RF1Release_INT_20160131.zip</code>
 
@@ -115,11 +120,6 @@ For a conversion of the Spanish Edition, the following files would be produced:
 * sct1_Descriptions_es_INT_20160430.txt
 * sct1_Relationships_Core_INT_20160131.txt
 * sct1_References_Core_INT_20160430.txt
-
-## System Requirements
-
-* Java Runtime Environment.  Download from http://www.oracle.com/technetwork/java/javase/downloads/index.html
-* Suggested Memory - 8Gb
 
 ### Notes
 
