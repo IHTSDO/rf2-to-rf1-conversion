@@ -1,9 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 set -e;
 
 memParams="-Xms3g -Xmx8g"
 
-while getopts ":Hdbivp:u:a:" opt
+while getopts ":Hbcdivp:u:a:" opt
 do
 	case $opt in
 		a)
@@ -11,6 +11,9 @@ do
 		;;
 		b)
 			betaFlag="-b"
+		;;
+		c)
+			mvn clean package
 		;;
 		H)
 			historyFlag="-H"
@@ -33,6 +36,7 @@ do
 		help|\?)
 			echo -e "Usage: [-s] [-l] [-v] [-u <unzip location>] [-a <additional files location>] [-p <filename>] -h [api-host]"
 			echo -e "\t a - additional files to be added into the output archive"
+			echo -e "\t c - (re)compile the tool"
 			echo -e "\t d - debug mode, allows IDE to connect on debug port"
 			echo -e "\t H - History, generates JUST the history file"
 			echo -e "\t i - Interactive mode allows sql queries to be run on the temporary database before destruction."
@@ -46,7 +50,9 @@ done
 
 runTimeFlags="${verboseFlag} ${betaFlag} ${historyFlag} ${previousRF1} ${interactiveFlag} ${ramDrive} ${additionalFilesLocation}"
 
-java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/Backup/SnomedCT_RF2Release_INT_20160731.zip -p ~/Backup/SnomedCT_RF1Release_INT_20160131.zip 
+
+#java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/Backup/SnomedCT_RF2Release_INT_20160731.zip -p ~/Backup/SnomedCT_RF1Release_INT_20160131.zip 
+java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/tmp/20170131_laterality/SnomedCT_RF2Release_INT_20170131_laterality.zip
 #java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/Backup/SnomedCT_RF2Release_INT_20160731.zip 
 #java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags}  ~/Backup/SnomedCT_RF2Release_INT_20160131.zip
 #java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/Backup/xSnomedCT_RF2Release_INT_20160731.zip
