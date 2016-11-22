@@ -79,6 +79,15 @@ public class GlobalUtils {
 			throw new RF1ConversionException("Failed to expand archive " + archive.getName(), e);
 		}
 	}
+	
+	public static String listDirectory (File dir) {
+		StringBuffer b = new StringBuffer();
+		for (File file : dir.listFiles()) {
+			b.append(file.getName())
+			  .append("\n");
+		}
+		return b.toString();
+	}
 
 	public static String findDateInString(String str, boolean optional) throws RF1ConversionException {
 		Matcher dateMatcher = Pattern.compile("(\\d{8})").matcher(str);

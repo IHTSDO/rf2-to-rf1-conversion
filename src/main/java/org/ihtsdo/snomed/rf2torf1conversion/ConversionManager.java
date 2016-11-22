@@ -7,6 +7,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -78,6 +79,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 	private int  previousSubsetVersion = 29;  //Taken from 20160131 RF1 International Release
 	private static final String RELEASE_NOTES = "SnomedCTReleaseNotes";
 	private static final String DOCUMENTATION_DIR = "Documentation/";
+	private static final String LATERALITY_SNAPSHOT_TEMPLATE = "der2_Refset_SimpleSnapshot_INT_DATE.txt";
 	
 	enum Edition { INTERNATIONAL, SPANISH };
 	
@@ -207,7 +209,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 			determineEdition(intLoadingArea, Edition.INTERNATIONAL, intReleaseDate);
 			
 			//Laterality indicators are now obligatory
-			loadLateralityIndicators(intReleaseDate);
+			loadLateralityIndicators(intLoadingArea, intReleaseDate);
 			
 			if (extRf2Archive != null) {
 				print("\nExtracting RF2 Extension Data...");
@@ -442,7 +444,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		// We only need to work with the full files
 		// ...mostly, we also need the Snapshot Relationship file in order to work out the Qualifying Relationships
 		// Also we'll take the documentation pdf
-		unzipFlat(archive, tempDir, new String[]{"Full","sct2_Relationship_Snapshot",RELEASE_NOTES});
+		unzipFlat(archive, tempDir, new String[]{"Full","sct2_Relationship_Snapshot","der2_Refset_SimpleSnapshot",RELEASE_NOTES});
 		
 		return tempDir;
 	}
@@ -635,34 +637,32 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 	/**
 	 * This is a temporary measure until we can get the Laterality Reference published as a refset.
 	 * at which point it will stop being an external file
+	 * @param loadingArea 
 	 */
-	private void loadLateralityIndicators(String releaseDate) throws RF1ConversionException {
-		//International Edition currently limited to January or July Release
-		int year = SnomedUtils.getEffectiveDatePart(releaseDate, EFFECTIVE_DATE_PART_YEAR);
-		int month = SnomedUtils.getEffectiveDatePart(releaseDate, EFFECTIVE_DATE_PART_MONTH);
-		String monthName;
-		if (month == 1) {
-			monthName = "Jan";
-		} else if (month == 7) {
-			monthName = "July";
-		} else {
-			throw new RF1ConversionException ("Unable to determine laterality reference file from release date " + releaseDate + " expected January or July for International Edition");
+	private void loadLateralityIndicators(File loadingArea, String releaseDate) throws RF1ConversionException {
+		String targetFilename = LATERALITY_SNAPSHOT_TEMPLATE.replace(DATE, releaseDate);
+		File lateralityFile = new File(loadingArea.getAbsolutePath() + File.separator + targetFilename);
+		if (!lateralityFile.canRead()) {
+			String msg = "Laterality Reference Set not detected/available in Simple Refset Snapshot: " + targetFilename + ".\nThis file is compulsory in this version of the RF2 to RF1 converter";
+			print(msg);
+			debug ("Could not find file among " + GlobalUtils.listDirectory(loadingArea));
+			throw new RF1ConversionException (msg);
 		}
-		String lateralityResourceName = "/LateralityReference" + monthName + year + ".txt"; 
-		InputStream lateralityStream = ConversionManager.class.getResourceAsStream(lateralityResourceName);
-		
-		try (BufferedReader br = new BufferedReader(new InputStreamReader(lateralityStream))) {
+		try (BufferedReader br = new BufferedReader(new FileReader(lateralityFile))) {
 			String line;
 			boolean firstLine = true;
 			while ((line = br.readLine()) != null) {
 				if (!firstLine) {
-					LateralityIndicator.registerIndicator(line);
+					String[] columns = line.split(FIELD_DELIMITER);
+					if (columns[SIMP_IDX_ACTIVE].equals("1") && columns[SIMP_IDX_REFSETID].equals(LATERALITY_REFSET_ID)) {
+						LateralityIndicator.registerIndicator(columns[SIMP_IDX_REFCOMPID]);
+					}
 				} else {
 					firstLine = false;
 				}
 			}
 		} catch (IOException ioe) {
-			throw new RF1ConversionException ("Unable to import laterality reference file " + lateralityResourceName, ioe);
+			throw new RF1ConversionException ("Unable to import laterality reference file " + lateralityFile.getAbsolutePath(), ioe);
 		}
 	}
 	
@@ -723,7 +723,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 				PrintWriter out = new PrintWriter(bw))
 			{
 				for (Concept thisConcept : allConcepts) {
-					if (LateralityIndicator.hasLateralityIndicator(thisConcept.getSctId(), LateralityIndicator.Lattomidsag.YES)) {
+					if (LateralityIndicator.hasLateralityIndicator(thisConcept.getSctId())) {
 						if (!thisConcept.hasAttribute(LateralityAttribute)) {
 							String relId = "";  //Default is to blank relationship ids
 							if (useRelationshipIds) {
