@@ -2,12 +2,11 @@ package org.ihtsdo.snomed.rf2torf1conversion.pojo;
 
 public interface RF2SchemaConstants {
 
-	public final Long SNOMED_ROOT_CONCEPT = 138875005L;
-	public final String ADDITIONAL_RELATIONSHIP = "900000000000227009";
-	public final String LATERALITY_ATTRIB = "272741003";
-	public final String LATERALITY_REFSET_ID = "703870008";
-	public final String SIDE_VALUE = "182353008";	
-	// id effectiveTime active moduleId sourceId destinationId relationshipGroup typeId characteristicTypeId modifierId
+	public static final Long SNOMED_ROOT_CONCEPT = 138875005L;
+	public static final String ADDITIONAL_RELATIONSHIP = "900000000000227009";
+	public static final String LATERALITY_ATTRIB = "272741003";
+	public static final String LATERALITY_REFSET_ID = "723264001";
+	public static final String SIDE_VALUE = "182353008";	
 	public static final String ISA = "116680003";
 	public static final Long ISA_ID = Long.parseLong(ISA);
 	
@@ -25,6 +24,7 @@ public interface RF2SchemaConstants {
 	public static final String HEADER_ROW = "id\teffectiveTime\tactive\tmoduleId\tsourceId\tdestinationId\trelationshipGroup\ttypeId\tcharacteristicTypeId\tmodifierId\r\n";
 
 	// Relationship columns
+	// id effectiveTime active moduleId sourceId destinationId relationshipGroup typeId characteristicTypeId modifierId
 	public static final int REL_IDX_ID = 0;
 	public static final int REL_IDX_EFFECTIVETIME = 1;
 	public static final int REL_IDX_ACTIVE = 2;
