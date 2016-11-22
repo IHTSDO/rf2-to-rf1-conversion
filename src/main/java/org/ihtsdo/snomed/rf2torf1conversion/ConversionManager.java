@@ -80,6 +80,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 	private static final String RELEASE_NOTES = "SnomedCTReleaseNotes";
 	private static final String DOCUMENTATION_DIR = "Documentation/";
 	private static final String LATERALITY_SNAPSHOT_TEMPLATE = "der2_Refset_SimpleSnapshot_INT_DATE.txt";
+	private static final int SUFFICIENT_LATERALITY_DATA = 10;
 	
 	enum Edition { INTERNATIONAL, SPANISH };
 	
@@ -642,27 +643,38 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 	private void loadLateralityIndicators(File loadingArea, String releaseDate) throws RF1ConversionException {
 		String targetFilename = LATERALITY_SNAPSHOT_TEMPLATE.replace(DATE, releaseDate);
 		File lateralityFile = new File(loadingArea.getAbsolutePath() + File.separator + targetFilename);
+		boolean sufficientDataReadOK = true;
 		if (!lateralityFile.canRead()) {
-			String msg = "Laterality Reference Set not detected/available in Simple Refset Snapshot: " + targetFilename + ".\nThis file is compulsory in this version of the RF2 to RF1 converter";
-			print(msg);
-			debug ("Could not find file among " + GlobalUtils.listDirectory(loadingArea));
-			throw new RF1ConversionException (msg);
-		}
-		try (BufferedReader br = new BufferedReader(new FileReader(lateralityFile))) {
-			String line;
-			boolean firstLine = true;
-			while ((line = br.readLine()) != null) {
-				if (!firstLine) {
-					String[] columns = line.split(FIELD_DELIMITER);
-					if (columns[SIMP_IDX_ACTIVE].equals("1") && columns[SIMP_IDX_REFSETID].equals(LATERALITY_REFSET_ID)) {
-						LateralityIndicator.registerIndicator(columns[SIMP_IDX_REFCOMPID]);
+			debug ("Could not find " + targetFilename + " among " + GlobalUtils.listDirectory(loadingArea));
+			sufficientDataReadOK = false;
+		} else {
+			int linesRead = 0;
+			try (BufferedReader br = new BufferedReader(new FileReader(lateralityFile))) {
+				String line;
+				boolean firstLine = true;
+				while ((line = br.readLine()) != null) {
+					if (!firstLine) {
+						String[] columns = line.split(FIELD_DELIMITER);
+						if (columns[SIMP_IDX_ACTIVE].equals("1") && columns[SIMP_IDX_REFSETID].equals(LATERALITY_REFSET_ID)) {
+							LateralityIndicator.registerIndicator(columns[SIMP_IDX_REFCOMPID]);
+							linesRead++;
+						}
+					} else {
+						firstLine = false;
 					}
-				} else {
-					firstLine = false;
 				}
+				if (linesRead < SUFFICIENT_LATERALITY_DATA) {
+					sufficientDataReadOK = false;
+				}
+			} catch (IOException ioe) {
+				throw new RF1ConversionException ("Unable to import laterality reference file " + lateralityFile.getAbsolutePath(), ioe);
 			}
-		} catch (IOException ioe) {
-			throw new RF1ConversionException ("Unable to import laterality reference file " + lateralityFile.getAbsolutePath(), ioe);
+		}
+		
+		if (!sufficientDataReadOK) {
+			String msg = "Laterality Reference Set not detected/available/sufficient in Simple Refset Snapshot: " + targetFilename + ".\nThis refset is compulsory in this version of the RF2 to RF1 converter";
+			print("\n" + msg);
+			throw new RF1ConversionException (msg);
 		}
 	}
 	
