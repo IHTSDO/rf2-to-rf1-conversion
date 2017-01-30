@@ -25,6 +25,9 @@ Please log any issues encountered through the GitHub Issues page:  https://githu
 ## System Requirements
 
 * Java Runtime Environment (make sure to get 64bit).  Download from http://www.oracle.com/technetwork/java/javase/downloads/index.html
+* Maven is required to build the tool: 
+  * Windows - http://maven.apache.org/guides/getting-started/windows-prerequisites.html
+  * Mac - most easily installed using 'brew' - http://brewformulas.org/Maven
 * Suggested Memory - 8Gb.   It scraped through with 6Gb.  Jury is still out on 4Gb.
 
 ## Building
