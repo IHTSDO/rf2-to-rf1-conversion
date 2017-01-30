@@ -50,10 +50,8 @@ done
 
 runTimeFlags="${verboseFlag} ${betaFlag} ${historyFlag} ${previousRF1} ${interactiveFlag} ${ramDrive} ${additionalFilesLocation}"
 
-#java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/Backup/SnomedCT_RF2Release_INT_20170131.zip
-#java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/Backup/SnomedCT_RF2Release_INT_20160731.zip -p ~/Backup/SnomedCT_RF1Release_INT_20160131.zip 
-java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/tmp/20170131_laterality/SnomedCT_RF2Release_INT_20170131_laterality.zip
-#java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/Backup/SnomedCT_RF2Release_INT_20160731.zip 
-#java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags}  ~/Backup/SnomedCT_RF2Release_INT_20160131.zip
-#java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/Backup/xSnomedCT_RF2Release_INT_20160731.zip
-#java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ~/Backup/SnomedCT_RF2Release_INT_20160731.zip ~/Backup/SnomedCT_SpanishRelease-es_INT_20161031.zip
+archive="/Users/Peter/Backup/SnomedCT_InternationalRF2_Production_20170131T120000.zip"
+#archive="/Users/Peter/Backup/SnomedCT_RF2Release_INT_20160731.zip"
+java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ${archive}
+
+
