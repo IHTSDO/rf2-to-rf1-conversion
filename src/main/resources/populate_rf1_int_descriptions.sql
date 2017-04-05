@@ -1,4 +1,3 @@
-
 -- Set language code as en-GB when no en-US row exists and visa versa
 UPDATE rf21_term t
 SET t.LANGUAGECODE = 'en-GB'
@@ -121,12 +120,12 @@ WHERE EXISTS (
 AND NOT t.US_DESC_TYPE = 3;
 
 INSERT INTO rf21_subsetlist SELECT DISTINCT 
-	CASE WHEN m.refsetId = 900000000000508004 THEN @SUBSETID_2 ELSE @SUBSETID_1 END AS SubsetID, 
+	CASE WHEN m.refsetId = @GBRefSet THEN @SUBSETID_2 ELSE @SUBSETID_1 END AS SubsetID, 
 	m.OriginalSubsetID AS OriginalSubsetID, 
 	@SUBSET_VERSION AS SUBSETVERSION, 
 	m.SubsetName AS SUBSETNAME, 
 	CASE WHEN LEFT(RIGHT(s.refsetId,3),1) = 1 THEN 3 ELSE 1 END AS SUBSETTYPE, 
-	CASE WHEN m.refsetId = 900000000000508004 THEN 'en-GB' ELSE 'en-US' END AS LANGUAGECODE, 
+	CASE WHEN m.refsetId = @GBRefSet THEN 'en-GB' ELSE 'en-US' END AS LANGUAGECODE, 
 	'0' AS RealmId, 
 	0 AS CONTEXTID
 FROM rf2_crefset s 

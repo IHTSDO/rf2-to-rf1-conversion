@@ -1,5 +1,8 @@
 -- PARALLEL_START;
 
+SET @CInactivationRefSet = '900000000000489007';
+SET @DInactivationRefSet = '900000000000490003';
+
 INSERT INTO rf2_concept
 SELECT * FROM rf2_concept_sv s
 WHERE s.effectiveTime =
@@ -222,6 +225,47 @@ DELETE FROM rf2_crefset a WHERE
 	WHERE a.ID = b.ID
 	AND a.linkedComponentId <> b.linkedComponentId
 );
+
+-- For inactivations, if a rows claims to be both active and inactive on the same effective time
+-- then assume the active row is correct
+-- H2 not happy about doing this using syntax: delete a from rf2_crefset a, rf2_crefset b
+create table inactiveDups as 
+select a.id from rf2_crefset a, rf2_crefset b
+where a.effectiveTime = b.effectiveTime
+and a.refsetid = b.refsetid
+and a.referencedcomponentid = b.referencedcomponentid
+and a.moduleid = b.moduleid
+and a.linkedComponentId = b.linkedComponentId
+and a.active = 0 
+and b.active = 1;
+
+-- Where two rows are active for the concept inactivation indicator 
+-- then delete all but the highest id
+insert into inactiveDups
+select a.id from rf2_crefset a, rf2_crefset b
+where a.refsetid = b.refsetid
+and a.refsetid = @CInactivationRefSet
+and a.referencedcomponentid = b.referencedcomponentid
+and a.id < b.id
+and a.active = 1 
+and b.active = 1;
+
+-- Where two rows are active for the description inactivation indicator 
+-- then delete all but the highest id
+insert into inactiveDups
+select a.id from rf2_crefset a, rf2_crefset b
+where a.refsetid = b.refsetid
+and a.refsetid = @DInactivationRefSet
+and a.referencedcomponentid = b.referencedcomponentid
+and a.id < b.id
+and a.active = 1 
+and b.active = 1;
+
+CREATE INDEX idx_inDups_id ON inactiveDups(id);
+
+DELETE FROM rf2_crefset where id in (select id from inactiveDups);
+
+DROP TABLE inactiveDups;
 
 DROP TABLE IF EXISTS rf2_temp;
 DROP TABLE IF EXISTS rf2_temp2;
