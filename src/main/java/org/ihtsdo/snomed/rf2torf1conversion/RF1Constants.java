@@ -111,6 +111,11 @@ public class RF1Constants implements RF1SchemaConstants{
 		rf1Map.put("900000000000483008", (byte) 3); /* Outdated component (foundation metadata concept) */
 		rf1Map.put("900000000000484002", (byte) 4); /* Ambiguous component (foundation metadata concept) */
 		rf1Map.put("900000000000485001", (byte) 5); /* Erroneous component (foundation metadata concept) */
+		
+		//New inactivation reasons added in the 20170131 release - map as per 'Erroneous' component
+		rf1Map.put("723278000", (byte) 5);  // |Not semantically equivalent component (foundation metadata concept)|
+		rf1Map.put("723277005", (byte) 5);  // |Nonconformance to editorial policy component (foundation metadata concept)|
+		
 		rf1Map.put("900000000000486000", (byte) 6); /* Limited component (foundation metadata concept) */
 		rf1Map.put("900000000000487009", (byte) 10); /* Component moved elsewhere (foundation metadata concept) */
 		rf1Map.put("900000000000492006", (byte) 11); /* Pending move (foundation metadata concept) */

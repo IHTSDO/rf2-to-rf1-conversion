@@ -14,6 +14,13 @@ This RF2 to RF1 conversion works solely from the data available in an RF2 archiv
 
 The tool is also currently able to handle the Spanish Edition by specifying an optional additional zip archive.
 
+UPDATE: Support has now been added for the US Edition, but this is experimental and has yes to be validated against previous releases.
+
+The US Edition conversion has the following caveats:
+* History prior to 20140131 is limited to that of the International Edition.  As such, some concepts may be missing their creation dates.
+* The US Edition contains a number of inactivation indicators for the same component when an inactivated component is only expected to have one active inactivation reason against it.  In this case, an inactivation indicator has been chosen at random (effectively, actually the highest UUID is used).
+
+
 ## Licence and Acknowledgements
 
 Based on work by Jeremy Rogers which was marked as Crown Copyright
