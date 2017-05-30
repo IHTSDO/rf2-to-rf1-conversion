@@ -49,7 +49,7 @@ do
 done
 
 runTimeFlags="${verboseFlag} ${betaFlag} ${historyFlag} ${previousRF1} ${interactiveFlag} ${ramDrive} ${additionalFilesLocation}"
-archive="/Users/Peter/Backup/SnomedCT_RF2Release_INT_20170131.zip"
+archive="/Users/Peter/Backup/xSnomedCT_InternationalRF2_ALPHA_20170731T120000Z.zip"
 
 set -x;
 java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ${archive}
