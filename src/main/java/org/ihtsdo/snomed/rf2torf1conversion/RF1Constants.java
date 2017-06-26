@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.zip.ZipInputStream;
 
 import org.ihtsdo.snomed.rf2torf1conversion.pojo.RF1SchemaConstants;
+import static org.ihtsdo.snomed.rf2torf1conversion.GlobalUtils.*;
 
 public class RF1Constants implements RF1SchemaConstants{
 
@@ -258,7 +259,7 @@ public class RF1Constants implements RF1SchemaConstants{
 		boolean isAvailable = false;
 		String sctId = null;
 		while (!isAvailable) {
-			sctId = availableRelationshipIds.readLine();
+			sctId = availableRelationshipIds.readLine().trim();
 			if (sctId == null) {
 				throw new RF1ConversionException("Run out of available relationship SCTIDs.  Contact IHTSDO");
 			}
@@ -293,13 +294,15 @@ public class RF1Constants implements RF1SchemaConstants{
 	/**
 	 * Stores the previous relationships in a map of triple+group to sctid, so they can 
 	 * be used for reconciliation or augmented with relationships from available_sctids_partition_02
+	 * @throws RF1ConversionException 
 	 */
-	public static void loadPreviousRelationships(ZipInputStream zis, boolean statedRelationships) throws IOException {
+	public static void loadPreviousRelationships(ZipInputStream zis, boolean stated) throws IOException, RF1ConversionException {
 
 		String line;
 		boolean isFirstLine = true;
 		//We don't want to close this reader because we have more to get out of zis
 		BufferedReader br = new BufferedReader(new InputStreamReader(zis, StandardCharsets.UTF_8));
+		long relationshipsStored = 0;
 		while ((line = br.readLine()) != null) {
 			if (isFirstLine) {
 				isFirstLine = false;
@@ -310,12 +313,13 @@ public class RF1Constants implements RF1SchemaConstants{
 									+ lineItems[RF1_IDX_RELATIONSHIPTYPE] + DELIM
 									+ lineItems[RF1_IDX_CONCEPTID2] + DELIM
 									+ lineItems[RF1_IDX_RELATIONSHIPGROUP];
-			if (statedRelationships) {
-				previousStatedRelationships.put(triplePlusGroup, lineItems[RF1_IDX_RELATIONSHIPID]);
-			} else {
-				previousInferredRelationships.put(triplePlusGroup, lineItems[RF1_IDX_RELATIONSHIPID]);
+			relationshipsStored++;
+			Map<String, String> previousRelationships = stated ? previousStatedRelationships : previousInferredRelationships;
+			if (previousRelationships.containsKey(triplePlusGroup)) {
+				throw new RF1ConversionException("Duplicate " + (stated?"stated":"inferred") + " relationship id detected: " + lineItems[RF1_IDX_RELATIONSHIPID]);
 			}
+			previousRelationships.put(triplePlusGroup, lineItems[RF1_IDX_RELATIONSHIPID]);
 		}
-		
+		debug ("Imported " + relationshipsStored + " previously " + (stated?"stated":"inferred") + " relationships");
 	}
 }
