@@ -32,7 +32,10 @@ WHERE NOT EXISTS (
 	AND t.typeid = @FSN
 	AND (  (moduleId =  @MetadataModule AND ( t.term like '%metadata concept)' or t.term like '%(metadata)'))
 	 OR t.term like '%metadato del núcleo)' OR t.term like '%(metadato fundacional)' )
-);
+)
+OR id = 900000000000441003;  
+-- Include the Snomed Model Component for the moment, to retain linkage concept
+-- and namespace component which do appear in RF2
 
 CREATE UNIQUE INDEX CONCEPT_CUI_X ON rf21_concept(CONCEPTID);
 
