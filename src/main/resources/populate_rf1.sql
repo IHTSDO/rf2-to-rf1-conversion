@@ -30,7 +30,7 @@ WHERE NOT EXISTS (
 	SELECT 1 FROM rf2_term t
 	WHERE c.id = t.conceptid
 	AND t.typeid = @FSN
-	AND (  (moduleId =  @MetadataModule AND t.term like '%metadata concept)')
+	AND (  (moduleId =  @MetadataModule AND ( t.term like '%metadata concept)' or t.term like '%(metadata)'))
 	 OR t.term like '%metadato del núcleo)' OR t.term like '%(metadato fundacional)' )
 );
 
