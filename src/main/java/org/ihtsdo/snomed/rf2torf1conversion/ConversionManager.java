@@ -550,12 +550,12 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 				File possibleArchive = new File(thisArg);
 				if (possibleArchive.exists() && !possibleArchive.isDirectory() && possibleArchive.canRead()) {
 					extRf2Archive = possibleArchive;
-				}				
+				}
 			}
 		}
 
 		if (intRf2Archive == null) {
-			print("Unable to determine RF2 Archive: " + args[args.length - 1]);
+			print("Unable to load RF2 Archive: " + args[args.length - 1]);
 			exit();
 		}
 
