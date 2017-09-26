@@ -76,6 +76,17 @@ AND EXISTS (
 	where t.descriptionId = tt.descriptionId
 );
 
+--Where the concept is inactive, the active description may not have an inactivation indicator
+-- (concept noncurrent), so we'll set the description status to 8 in these cases by default.
+UPDATE rf21_term t
+SET t.DESCRIPTIONSTATUS = 8
+WHERE EXISTS (
+	SELECT 1 FROM rf2_concept c, rf2_term d
+	WHERE t.descriptionid = d.id
+	AND d.conceptId = c.id
+	AND d.active = 1
+	AND c.active = 0 );
+
 --Where term is has inactivation reason, set the description status
 UPDATE rf21_term t
 SET t.DESCRIPTIONSTATUS = COALESCE (

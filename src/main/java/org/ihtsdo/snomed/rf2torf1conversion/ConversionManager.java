@@ -550,12 +550,12 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 				File possibleArchive = new File(thisArg);
 				if (possibleArchive.exists() && !possibleArchive.isDirectory() && possibleArchive.canRead()) {
 					extRf2Archive = possibleArchive;
-				}				
+				}
 			}
 		}
 
 		if (intRf2Archive == null) {
-			print("Unable to determine RF2 Archive: " + args[args.length - 1]);
+			print("Unable to load RF2 Archive: " + args[args.length - 1]);
 			exit();
 		}
 
@@ -842,6 +842,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 	}
 
 	private void loadPreviousRF1(EditionConfig config) throws RF1ConversionException {
+		int previousRelFilesLoaded = 0;
 		try {
 			ZipInputStream zis = new ZipInputStream(new FileInputStream(previousRF1Location));
 			ZipEntry ze = zis.getNextEntry();
@@ -856,9 +857,11 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 							//We need to use static methods here so that H2 can access as functions.
 							print ("\nLoading previous RF1 inferred relationships");
 							RF1Constants.loadPreviousRelationships(zis, false);
+							previousRelFilesLoaded++;
 						}else if (fileName.contains("res1_StatedRelationships")) {
 							print ("\nLoading previous RF1 stated relationships");
 							RF1Constants.loadPreviousRelationships(zis, true);
+							previousRelFilesLoaded++;
 						}
 					}
 					ze = zis.getNextEntry();
@@ -871,6 +874,9 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 			throw new RF1ConversionException("Failed to load previous RF1 archive " + previousRF1Location.getName(), e);
 		}
 		
+		if (previousRelFilesLoaded != 2) {
+			throw new RF1ConversionException("Expected to load 2 previous relationship files, instead loaded " + previousRelFilesLoaded );
+		}
 	}
 	
 	private void updateSubsetIds(ZipInputStream zis, EditionConfig config) throws NumberFormatException, IOException {
