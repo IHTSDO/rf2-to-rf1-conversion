@@ -61,12 +61,14 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 	boolean onlyHistory = false;
 	boolean isExtension = false;
 	boolean goInteractive = false;
+	boolean isSnapshotConversion = false;
 	Edition edition;
 	private String EXT = "EXT";
 	private String LNG = "LNG";
 	private String MOD = "MOD";
 	private String DATE = "DATE";
 	private String OUT = "OUT";
+	private String TYPE = "TYPE";
 	private String outputFolderTemplate = "SnomedCT_OUT_MOD_DATE";
 	private String ANCIENT_HISTORY = "/sct1_ComponentHistory_Core_INT_20130731.txt";
 	private String QUALIFYING_RULES = "/qualifying_relationship_rules.json";
@@ -115,7 +117,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		}
 	}
 	
-	private static final String EDITION_DETERMINER = "sct2_Description_EXTFull-LNG_MOD_DATE.txt";
+	private static final String EDITION_DETERMINER = "sct2_Description_EXTTYPE-LNG_MOD_DATE.txt";
 	
 	static Map<Edition, EditionConfig> knownEditionMap = new HashMap<Edition, EditionConfig>();
 	{
@@ -127,24 +129,24 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 	
 	static Map<String, String> editionfileToTable = new HashMap<String, String>();
 	{
-		editionfileToTable.put("sct2_Concept_EXTFull_MOD_DATE.txt", "rf2_concept_sv");
-		editionfileToTable.put("sct2_Relationship_EXTFull_MOD_DATE.txt", "rf2_rel_sv");
-		editionfileToTable.put("sct2_StatedRelationship_EXTFull_MOD_DATE.txt", "rf2_rel_sv");
-		editionfileToTable.put("sct2_Identifier_EXTFull_MOD_DATE.txt", "rf2_identifier_sv");
+		editionfileToTable.put("sct2_Concept_EXTTYPE_MOD_DATE.txt", "rf2_concept_sv");
+		editionfileToTable.put("sct2_Relationship_EXTTYPE_MOD_DATE.txt", "rf2_rel_sv");
+		editionfileToTable.put("sct2_StatedRelationship_EXTTYPE_MOD_DATE.txt", "rf2_rel_sv");
+		editionfileToTable.put("sct2_Identifier_EXTTYPE_MOD_DATE.txt", "rf2_identifier_sv");
 		//Extensions can use a mix of International and their own descriptions
 		editionfileToTable.put(EDITION_DETERMINER, "rf2_term_sv");
 		
 		//We need to know the International Preferred Term if the Extension doesn't specify one
-		editionfileToTable.put("der2_cRefset_LanguageEXTFull-LNG_MOD_DATE.txt", "rf2_crefset_sv");
+		editionfileToTable.put("der2_cRefset_LanguageEXTTYPE-LNG_MOD_DATE.txt", "rf2_crefset_sv");
 		
 		//Concepts still need inactivation reasons from the International Edition
-		editionfileToTable.put("der2_cRefset_AssociationReferenceEXTFull_MOD_DATE.txt", "rf2_crefset_sv");
-		editionfileToTable.put("der2_cRefset_AttributeValueEXTFull_MOD_DATE.txt", "rf2_crefset_sv");	
+		editionfileToTable.put("der2_cRefset_AssociationReferenceEXTTYPE_MOD_DATE.txt", "rf2_crefset_sv");
+		editionfileToTable.put("der2_cRefset_AttributeValueEXTTYPE_MOD_DATE.txt", "rf2_crefset_sv");	
 		
 		//CTV3 and SNOMED RT Identifiers come from the International Edition
-		editionfileToTable.put("der2_sRefset_SimpleMapEXTFull_MOD_DATE.txt", "rf2_srefset_sv");
-		//intfileToTable.put("der2_iissscRefset_ComplexEXTMapFull_MOD_DATE.txt", "rf2_iissscrefset_sv");
-		//intfileToTable.put("der2_iisssccRefset_ExtendedMapEXTFull_MOD_DATE.txt", "rf2_iisssccrefset_sv");
+		editionfileToTable.put("der2_sRefset_SimpleMapEXTTYPE_MOD_DATE.txt", "rf2_srefset_sv");
+		//intfileToTable.put("der2_iissscRefset_ComplexEXTMapTYPE_MOD_DATE.txt", "rf2_iissscrefset_sv");
+		//intfileToTable.put("der2_iisssccRefset_ExtendedMapEXTTYPE_MOD_DATE.txt", "rf2_iisssccrefset_sv");
 
 	}
 	
@@ -153,21 +155,21 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		//Extension could supplement any file in international edition
 		extensionfileToTable.putAll(editionfileToTable); 
 		extensionfileToTable.put(EDITION_DETERMINER, "rf2_term_sv");
-		extensionfileToTable.put("sct2_TextDefinition_EXTFull-LNG_MOD_DATE.txt", "rf2_def_sv");
+		extensionfileToTable.put("sct2_TextDefinition_EXTTYPE-LNG_MOD_DATE.txt", "rf2_def_sv");
 
-		extensionfileToTable.put("der2_cRefset_AssociationReferenceEXTFull_MOD_DATE.txt", "rf2_crefset_sv");
-		extensionfileToTable.put("der2_cRefset_AttributeValueEXTFull_MOD_DATE.txt", "rf2_crefset_sv");
-		extensionfileToTable.put("der2_Refset_SimpleEXTFull_MOD_DATE.txt", "rf2_refset_sv");
+		extensionfileToTable.put("der2_cRefset_AssociationReferenceEXTTYPE_MOD_DATE.txt", "rf2_crefset_sv");
+		extensionfileToTable.put("der2_cRefset_AttributeValueEXTTYPE_MOD_DATE.txt", "rf2_crefset_sv");
+		extensionfileToTable.put("der2_Refset_SimpleEXTTYPE_MOD_DATE.txt", "rf2_refset_sv");
 
-		extensionfileToTable.put("der2_cRefset_LanguageEXTFull-LNG_MOD_DATE.txt", "rf2_crefset_sv");
+		extensionfileToTable.put("der2_cRefset_LanguageEXTTYPE-LNG_MOD_DATE.txt", "rf2_crefset_sv");
 
-		extensionfileToTable.put("der2_sRefset_SimpleMapEXTFull_MOD_DATE.txt", "rf2_srefset_sv");
-		//extfileToTable.put("der2_iissscRefset_ComplexEXTMapFull_MOD_DATE.txt", "rf2_iissscrefset_sv");
-		//extfileToTable.put("der2_iisssccRefset_ExtendedMapEXTFull_MOD_DATE.txt", "rf2_iisssccrefset_sv");
+		extensionfileToTable.put("der2_sRefset_SimpleMapEXTTYPE_MOD_DATE.txt", "rf2_srefset_sv");
+		//extfileToTable.put("der2_iissscRefset_ComplexEXTMapTYPE_MOD_DATE.txt", "rf2_iissscrefset_sv");
+		//extfileToTable.put("der2_iisssccRefset_ExtendedMapEXTTYPE_MOD_DATE.txt", "rf2_iisssccrefset_sv");
 
-		extensionfileToTable.put("der2_cciRefset_RefsetDescriptorEXTFull_MOD_DATE.txt", "rf2_ccirefset_sv");
-		extensionfileToTable.put("der2_ciRefset_DescriptionTypeEXTFull_MOD_DATE.txt", "rf2_cirefset_sv");
-		extensionfileToTable.put("der2_ssRefset_ModuleDependencyEXTFull_MOD_DATE.txt", "rf2_ssrefset_sv");
+		extensionfileToTable.put("der2_cciRefset_RefsetDescriptorEXTTYPE_MOD_DATE.txt", "rf2_ccirefset_sv");
+		extensionfileToTable.put("der2_ciRefset_DescriptionTypeEXTTYPE_MOD_DATE.txt", "rf2_cirefset_sv");
+		extensionfileToTable.put("der2_ssRefset_ModuleDependencyEXTTYPE_MOD_DATE.txt", "rf2_ssrefset_sv");
 	}
 	
 	public static Map<String, String>intExportMap = new HashMap<String, String>();
@@ -428,7 +430,8 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 				String target = EDITION_DETERMINER.replace(EXT, parts.editionName)
 									.replace(LNG, parts.langCode)
 									.replace(MOD, parts.module)
-									.replace(DATE, releaseDate);
+									.replace(DATE, releaseDate)
+									.replace(TYPE, isSnapshotConversion ? "Snapshot" : "Full");
 				if (thisFile.getName().equals(target)) {
 					this.edition = thisEdition.getKey();
 					return;
@@ -453,7 +456,8 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		// We only need to work with the full files
 		// ...mostly, we also need the Snapshot Relationship file in order to work out the Qualifying Relationships
 		// Also we'll take the documentation pdf
-		unzipFlat(archive, tempDir, new String[]{"Full","sct2_Relationship_Snapshot","der2_Refset_SimpleSnapshot",RELEASE_NOTES});
+		String match = isSnapshotConversion ? "Snapshot" : "Full";
+		unzipFlat(archive, tempDir, new String[]{ match, "sct2_Relationship_Snapshot","der2_Refset_SimpleSnapshot",RELEASE_NOTES});
 		
 		return tempDir;
 	}
@@ -509,9 +513,20 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 				GlobalUtils.verbose = true;
 			} else if (thisArg.equals("-i")) {
 				goInteractive = true;
+			} else if (thisArg.equals("-s")) {
+				//New feature, currently undocumented until proven.
+				print ("Option set to perform conversion on Snapshot files.  No history will be produced.");
+				isSnapshotConversion = true;
+				includeHistory = false;
+				if (onlyHistory) {
+					throw new RF1ConversionException("History is not possible with a snapshot conversion");
+				}
 			} else if (thisArg.equals("-H")) {
 				includeHistory = true;
 				onlyHistory = true;
+				if (isSnapshotConversion) {
+					throw new RF1ConversionException("History is not possible with a snapshot conversion");
+				}
 			} else if (thisArg.equals("-b")) {
 				isBeta = true;
 			}else if (thisArg.equals("-u")) {
@@ -566,12 +581,15 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 	private void loadRF2Data(File loadingArea, EditionConfig config, String releaseDate, Map<String, String> fileToTable) throws RF1ConversionException {
 		// We can do the load in parallel. Only 3 threads because heavily I/O
 		db.startParallelProcessing(3);
+		String releaseType = isSnapshotConversion ? "Snapshot":"Full";
 		for (Map.Entry<String, String> entry : fileToTable.entrySet()) {
 			// Replace DATE in the filename with the actual release date
 			String fileName = entry.getKey().replace(DATE, releaseDate)
 								.replace(EXT, config.editionName)
 								.replace(LNG, config.langCode)
-								.replace(MOD, config.module);
+								.replace(MOD, config.module)
+								.replace(TYPE, releaseType);
+			
 			File file = new File(loadingArea + File.separator + fileName);
 			
 			//Only load each file once

@@ -66,6 +66,7 @@ public class GlobalUtils {
 								IOUtils.copy(zis, out);
 								IOUtils.closeQuietly(out);
 								updateProgress();
+								break;
 							}
 						}
 					}
