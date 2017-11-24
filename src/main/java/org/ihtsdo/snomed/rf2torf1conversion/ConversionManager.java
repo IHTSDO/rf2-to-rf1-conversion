@@ -85,7 +85,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 	private static final String LATERALITY_SNAPSHOT_TEMPLATE = "der2_Refset_SimpleSnapshot_MOD_DATE.txt";
 	private static final int SUFFICIENT_LATERALITY_DATA = 10;
 	
-	enum Edition { INTERNATIONAL, SPANISH, US };
+	enum Edition { INTERNATIONAL, SPANISH, US, SG };
 	
 	class Dialect {
 		String langRefSetId;
@@ -96,6 +96,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		}
 	}
 
+	public final Dialect dialectSg = new Dialect ("9011000132109","sg");  //Singapore English
 	public final Dialect dialectEs = new Dialect ("450828004","es");  //Latin American Spanish
 	public final Dialect dialectGb = new Dialect ("900000000000508004","en-GB");
 	public final Dialect dialectUs = new Dialect ("900000000000509007","en-US");
@@ -125,6 +126,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		knownEditionMap.put(Edition.INTERNATIONAL, new EditionConfig("", "en", "INT", "RF1Release", true, new Dialect[]{dialectGb, dialectUs}));   //International Edition has no Extension name
 		knownEditionMap.put(Edition.SPANISH, new EditionConfig("SpanishExtension", "es", "INT", "SpanishRelease-es", true ,new Dialect[]{dialectEs}));
 		knownEditionMap.put(Edition.US, new EditionConfig("", "en", "US1000124", "RF1Release", false, new Dialect[]{dialectGb, dialectUs}));
+		knownEditionMap.put(Edition.SG, new EditionConfig("", "en-SG", "SG1000132", "RF1Release", true, new Dialect[]{dialectGb, dialectUs, dialectSg}));
 	}
 	
 	static Map<String, String> editionfileToTable = new HashMap<String, String>();
@@ -293,7 +295,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 			String filePath = getQualifyingRelationshipFilepath(intReleaseDate, extReleaseDate, knownEditionMap.get(edition), exportArea);
 			if (includeAllQualifyingRelationships || includeLateralityIndicators) {
 				print("\nLoading Inferred Relationship Hierarchy for Qualifying Relationship computation...");
-				loadRelationshipHierarchy(config, intLoadingArea);
+				loadRelationshipHierarchy(knownEditionMap.get(Edition.INTERNATIONAL), intLoadingArea);
 			}
 			
 			if (includeAllQualifyingRelationships) {
