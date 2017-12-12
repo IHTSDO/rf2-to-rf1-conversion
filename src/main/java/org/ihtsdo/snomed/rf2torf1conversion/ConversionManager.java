@@ -142,7 +142,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		editionfileToTable.put("der2_cRefset_LanguageEXTTYPE-LNG_MOD_DATE.txt", "rf2_crefset_sv");
 		
 		//Concepts still need inactivation reasons from the International Edition
-		editionfileToTable.put("der2_cRefset_AssociationReferenceEXTTYPE_MOD_DATE.txt", "rf2_crefset_sv");
+		editionfileToTable.put("der2_cRefset_AssociationEXTTYPE_MOD_DATE.txt", "rf2_crefset_sv");
 		editionfileToTable.put("der2_cRefset_AttributeValueEXTTYPE_MOD_DATE.txt", "rf2_crefset_sv");	
 		
 		//CTV3 and SNOMED RT Identifiers come from the International Edition
@@ -159,7 +159,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		extensionfileToTable.put(EDITION_DETERMINER, "rf2_term_sv");
 		extensionfileToTable.put("sct2_TextDefinition_EXTTYPE-LNG_MOD_DATE.txt", "rf2_def_sv");
 
-		extensionfileToTable.put("der2_cRefset_AssociationReferenceEXTTYPE_MOD_DATE.txt", "rf2_crefset_sv");
+		extensionfileToTable.put("der2_cRefset_AssociationEXTTYPE_MOD_DATE.txt", "rf2_crefset_sv");
 		extensionfileToTable.put("der2_cRefset_AttributeValueEXTTYPE_MOD_DATE.txt", "rf2_crefset_sv");
 		extensionfileToTable.put("der2_Refset_SimpleEXTTYPE_MOD_DATE.txt", "rf2_refset_sv");
 
