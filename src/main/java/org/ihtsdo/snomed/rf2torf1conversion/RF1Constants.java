@@ -268,7 +268,7 @@ public class RF1Constants implements RF1SchemaConstants{
 			sctId = availableRelationshipIds.readLine();
 			if (sctId == null) {
 				if (relIdsLacking == 0) {
-					System.err.println("Run out of available relationship SCTIDs after issuing " + relIdsIssued + " and skipping " + relIdsSkipped + ". Contact SNOMED International.");
+					System.err.println("\nRun out of available relationship SCTIDs after issuing " + relIdsIssued + " and skipping " + relIdsSkipped + ". Contact SNOMED International.");
 				}
 				relIdsLacking++;
 				return null;
