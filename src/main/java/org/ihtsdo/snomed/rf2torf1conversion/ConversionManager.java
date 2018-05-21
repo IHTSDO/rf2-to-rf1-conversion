@@ -333,7 +333,9 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 			
 			try {
 				print(RF1Constants.getRelationshipIdUsageSummary());
-			} catch (Exception e){}
+			} catch (Exception e){
+				print ("Failed to print usage summary due to " + e.getMessage());
+			}
 			
 			print("Cleaning up resources...");
 			try {

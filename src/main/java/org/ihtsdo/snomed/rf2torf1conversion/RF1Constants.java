@@ -33,6 +33,7 @@ public class RF1Constants implements RF1SchemaConstants{
 	private static BufferedReader availableRelationshipIds;
 	private static int relIdsSkipped = 0;
 	private static int relIdsIssued = 0;
+	private static int relIdsLacking = 0;
 	
 	private static Map<String, Byte> rf1Map = new HashMap<String, Byte>();
 	static {
@@ -258,11 +259,21 @@ public class RF1Constants implements RF1SchemaConstants{
 	private static String getNextAvailableRelationship() throws RF1ConversionException, IOException {
 		boolean isAvailable = false;
 		String sctId = null;
+		
+		if (availableRelationshipIds == null) {
+			throw new RF1ConversionException("availableRelationshipIds is null");
+		}
+		
 		while (!isAvailable) {
-			sctId = availableRelationshipIds.readLine().trim();
+			sctId = availableRelationshipIds.readLine();
 			if (sctId == null) {
-				throw new RF1ConversionException("Run out of available relationship SCTIDs.  Contact IHTSDO");
+				if (relIdsLacking == 0) {
+					System.err.println("Run out of available relationship SCTIDs after issuing " + relIdsIssued + " and skipping " + relIdsSkipped + ". Contact SNOMED International.");
+				}
+				relIdsLacking++;
+				return null;
 			}
+			sctId = sctId.trim();
 			if (previousInferredRelationships.containsValue(sctId) || previousStatedRelationships.containsValue(sctId)) {
 				relIdsSkipped++;
 			} else {
@@ -274,16 +285,19 @@ public class RF1Constants implements RF1SchemaConstants{
 	}
 	
 	public static String getRelationshipIdUsageSummary() throws IOException {
-		if (availableRelationshipIds == null || !availableRelationshipIds.ready()) {
-			return "";
+		if (availableRelationshipIds == null) {
+			return "Relationship Ids not used.";
 		}
 		int relIdsRemaining = 0;
-		while (availableRelationshipIds.readLine() != null) {
-			relIdsRemaining++;
+		if (availableRelationshipIds.ready()) {
+			while (availableRelationshipIds.readLine() != null) {
+				relIdsRemaining++;
+			}
 		}
 		String relSummary = "Relationship Ids Issued: " + relIdsIssued
 				+ "\nRelationship Ids Skipped (already in use): " + relIdsSkipped
-				+ "\nRelationship Ids remaining: " + relIdsRemaining;
+				+ "\nRelationship Ids remaining: " + relIdsRemaining 
+				+ "\nRelationship Ids lacking: " + relIdsLacking;
 		return relSummary;
 	}
 
