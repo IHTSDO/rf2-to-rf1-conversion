@@ -14,7 +14,7 @@
 		conceptId BIGINT NOT NULL,
 		languageCode VARCHAR(2) NOT NULL,
 		typeId BIGINT NOT NULL,
-		term VARCHAR (255) NOT NULL,
+		term VARCHAR (350) NOT NULL,
 		caseSignificanceId BIGINT NOT NULL);
 
 	CREATE TABLE rf2_def (

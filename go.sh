@@ -34,7 +34,7 @@ do
 			ramDrive="-u $OPTARG"
 		;;
 		help|\?)
-			echo -e "Usage: [-s] [-i] [-H] [-v] [-u <unzip location>] [-a <additional files location>] [-p <filename>]"
+			echo -e "Usage: [-i] [-H] [-v] [-u <unzip location>] [-a <additional files location>] [-p <filename>]"
 			echo -e "\t a - additional files to be added into the output archive"
 			echo -e "\t c - (re)compile the tool"
 			echo -e "\t d - debug mode, allows IDE to connect on debug port"
@@ -49,7 +49,7 @@ do
 done
 
 runTimeFlags="${verboseFlag} ${betaFlag} ${historyFlag} ${previousRF1} ${interactiveFlag} ${ramDrive} ${additionalFilesLocation}"
-archive="/Users/Peter/Backup/xSnomedCT_InternationalRF2_BETA_20170731T120000Z.zip"
+archive="/Users/Peter/Backup/SnomedCT_InternationalRF2_Production_20180731T120000Z.zip"
 
 set -x;
 java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ${archive}

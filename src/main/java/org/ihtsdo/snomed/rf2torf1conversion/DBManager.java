@@ -175,7 +175,7 @@ public class DBManager {
 				long startTime = System.currentTimeMillis();
 				if (sql.startsWith("STOP")) {
 					throw new RuntimeException("Manually stated \"STOP\" encountered");
-				} else if (sql.startsWith("SELECT") || sql.startsWith("SHOW")) {
+				} else if (sql.startsWith("SELECT") || sql.startsWith("select") || sql.startsWith("SHOW")) {
 					executeSelect();
 				} else {
 					Connection conn = dbPool.getConnection();
