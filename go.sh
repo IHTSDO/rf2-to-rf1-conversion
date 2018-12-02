@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e;
 
-memParams="-Xms3g -Xmx8g"
+memParams="-Xms10g -Xmx12g"
 
 while getopts ":Hbcdivp:u:a:" opt
 do
@@ -49,7 +49,7 @@ do
 done
 
 runTimeFlags="${verboseFlag} ${betaFlag} ${historyFlag} ${previousRF1} ${interactiveFlag} ${ramDrive} ${additionalFilesLocation}"
-archive="/Users/Peter/Backup/SnomedCT_InternationalRF2_Production_20180731T120000Z.zip"
+archive="/c/Users/Peter/Backup/xSnomedCT_InternationalRF2_ALPHA_20190131T120000Z.zip"
 
 set -x;
 java -jar ${memParams} ${debugParams} target/RF2toRF1Converter.jar ${runTimeFlags} ${archive}

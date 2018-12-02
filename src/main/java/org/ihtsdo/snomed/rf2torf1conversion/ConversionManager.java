@@ -361,6 +361,10 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 			} catch (Exception e) {
 				debug("Error while cleaning up loading/export Areas " + e.getMessage());
 			}
+			
+			if (RF1Constants.getRelIdsLacking() > 0) {
+				print ("*** Ran out of IDs to the tune of " + RF1Constants.getRelIdsLacking() + ". File cannot be published! ***");
+			}
 		}
 		
 	}

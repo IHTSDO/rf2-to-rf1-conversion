@@ -191,7 +191,7 @@ public class DBManager {
 				updateProgress();
 			} catch (SQLException e) {
 				failureDetected = true;
-				throw new RuntimeException("Failed to execute SQL Statement", e);
+				throw new RuntimeException("Failed to execute SQL Statement: " + sql, e);
 			}
 		}
 		

@@ -1,12 +1,8 @@
 package org.ihtsdo.snomed.rf2torf1conversion;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.zip.ZipInputStream;
 
 import org.ihtsdo.snomed.rf2torf1conversion.pojo.RF1SchemaConstants;
@@ -28,8 +24,10 @@ public class RF1Constants implements RF1SchemaConstants{
 	private static final String DELIM = "_";
 	
 	//Map of triple+group to SCTID
-	public static Map<String, String> previousInferredRelationships = new HashMap<String, String>();
-	public static Map<String, String> previousStatedRelationships = new HashMap<String, String>();
+	public static Map<String, String> previousInferredRelationshipMap = new HashMap<String, String>();
+	public static Map<String, String> previousStatedRelationshipMap = new HashMap<String, String>();
+	public static Set<String> usedSCTIDs = new HashSet<>();
+	
 	private static BufferedReader availableRelationshipIds;
 	private static int relIdsSkipped = 0;
 	private static int relIdsIssued = 0;
@@ -244,7 +242,11 @@ public class RF1Constants implements RF1SchemaConstants{
 	
 	
 	public static String lookupRelationshipId(String source, String type, String destination, String groupNum, boolean statedRelationships) throws RF1ConversionException, IOException {
-		Map<String, String> previousRelationships = statedRelationships ? previousStatedRelationships : previousInferredRelationships;
+		if (!isNumeric(source) || !isNumeric(type) || !isNumeric(destination)) {
+			throw new RF1ConversionException("Attempt to look up ID for invalid Relationship S:" + source + " T:" + type + " D:" + destination);
+		}
+		
+		Map<String, String> previousRelationships = statedRelationships ? previousStatedRelationshipMap : previousInferredRelationshipMap;
 		String key = source + DELIM + type + DELIM + destination + DELIM + groupNum;
 		//Do we already have an SCTID for this key?
 		if (previousRelationships.containsKey(key)) {
@@ -252,10 +254,30 @@ public class RF1Constants implements RF1SchemaConstants{
 		}
 		//Otherwise get the next one available and assign it so there's no danger of using it again
 		String nextSCTID = getNextAvailableRelationship();
-		previousRelationships.put(key, nextSCTID);
+		if (nextSCTID != null) {
+			previousRelationships.put(key, nextSCTID);
+			usedSCTIDs.add(nextSCTID);
+			if (!isNumeric(nextSCTID)) {
+				//It's OK to put in a null, we'll keep a count and report how many were lacking
+				throw new RF1ConversionException("Received a non-sctid on request for relationship: " + key + ": '" + nextSCTID + "'");
+			}
+		}
+		
 		return nextSCTID;
 	}
-	
+
+	private static boolean isNumeric(String sctId) {
+		if (sctId != null && !sctId.isEmpty()) {
+			for (char c : sctId.toCharArray()) {
+				if (!Character.isDigit(c)) {
+					return false;
+				}
+			}
+			return true;
+		}
+		return false;
+	}
+
 	private static String getNextAvailableRelationship() throws RF1ConversionException, IOException {
 		boolean isAvailable = false;
 		String sctId = null;
@@ -265,8 +287,8 @@ public class RF1Constants implements RF1SchemaConstants{
 		}
 		
 		while (!isAvailable) {
-			sctId = availableRelationshipIds.readLine().trim();
-			if (sctId == null) {
+			sctId = availableRelationshipIds.readLine();
+			if (sctId == null || sctId.trim().isEmpty()) {
 				if (relIdsLacking == 0) {
 					System.err.println("\nRun out of available relationship SCTIDs after issuing " + relIdsIssued + " and skipping " + relIdsSkipped + ". Contact SNOMED International.");
 				}
@@ -274,11 +296,14 @@ public class RF1Constants implements RF1SchemaConstants{
 				return null;
 			}
 			sctId = sctId.trim();
-			if (previousInferredRelationships.containsValue(sctId) || previousStatedRelationships.containsValue(sctId)) {
+			if (usedSCTIDs.contains(sctId)) {
 				relIdsSkipped++;
 			} else {
 				isAvailable = true;
 			}
+		}
+		if (relIdsIssued % 1000 == 0) {
+			System.out.print(".");
 		}
 		relIdsIssued++;
 		return sctId;
@@ -323,17 +348,28 @@ public class RF1Constants implements RF1SchemaConstants{
 				continue;
 			}
 			String[] lineItems = line.split(RF1_FIELD_DELIMITER);
+			//Every field should be numeric
+			for (String item : lineItems) {
+				if (!isNumeric(item)) {
+					throw new RF1ConversionException("Invalid previous relationship row at line " + relationshipsStored + ": " + line);
+				}
+			}
 			String triplePlusGroup = lineItems[RF1_IDX_CONCEPTID1] + DELIM 
 									+ lineItems[RF1_IDX_RELATIONSHIPTYPE] + DELIM
 									+ lineItems[RF1_IDX_CONCEPTID2] + DELIM
 									+ lineItems[RF1_IDX_RELATIONSHIPGROUP];
 			relationshipsStored++;
-			Map<String, String> previousRelationships = stated ? previousStatedRelationships : previousInferredRelationships;
+			Map<String, String> previousRelationships = stated ? previousStatedRelationshipMap : previousInferredRelationshipMap;
 			if (previousRelationships.containsKey(triplePlusGroup)) {
 				throw new RF1ConversionException("Duplicate " + (stated?"stated":"inferred") + " relationship id detected: " + lineItems[RF1_IDX_RELATIONSHIPID]);
 			}
 			previousRelationships.put(triplePlusGroup, lineItems[RF1_IDX_RELATIONSHIPID]);
+			usedSCTIDs.add(lineItems[RF1_IDX_RELATIONSHIPID]);
 		}
 		debug ("Imported " + relationshipsStored + " previously " + (stated?"stated":"inferred") + " relationships");
+	}
+	
+	public static int getRelIdsLacking() {
+		return relIdsLacking;
 	}
 }
