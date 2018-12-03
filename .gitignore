@@ -5,3 +5,4 @@ target
 go.sh
 *.txt
 .*
+/bin/
