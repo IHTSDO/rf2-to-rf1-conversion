@@ -85,7 +85,7 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 	private static final String LATERALITY_SNAPSHOT_TEMPLATE = "der2_Refset_SimpleSnapshot_MOD_DATE.txt";
 	private static final int SUFFICIENT_LATERALITY_DATA = 10;
 	
-	enum Edition { INTERNATIONAL, SPANISH, US, SG };
+	enum Edition { INTERNATIONAL, SPANISH, US, SG, UKCLIN, UKDRUG };
 	
 	class Dialect {
 		String langRefSetId;
@@ -127,6 +127,8 @@ public class ConversionManager implements RF2SchemaConstants, RF1SchemaConstants
 		knownEditionMap.put(Edition.SPANISH, new EditionConfig("SpanishExtension", "es", "INT", "SpanishRelease-es", true ,new Dialect[]{dialectEs}));
 		knownEditionMap.put(Edition.US, new EditionConfig("", "en", "US1000124", "RF1Release", false, new Dialect[]{dialectGb, dialectUs}));
 		knownEditionMap.put(Edition.SG, new EditionConfig("", "en-SG", "SG1000132", "RF1Release", true, new Dialect[]{dialectGb, dialectUs, dialectSg}));
+		knownEditionMap.put(Edition.UKCLIN, new EditionConfig("", "en", "GB1000000", "RF1Release", true, new Dialect[]{dialectGb, dialectUs}));
+		knownEditionMap.put(Edition.UKDRUG, new EditionConfig("", "en", "GB1000001", "RF1Release", true, new Dialect[]{dialectGb, dialectUs}));
 	}
 	
 	static Map<String, String> editionfileToTable = new HashMap<String, String>();
