@@ -1,3 +1,8 @@
+
+# Archive Status Notice
+**This repository is no longer maintained or used and has therefore been archived and made read-only. SNOMED International does not recommend using the code in this repository.**
+
+
 # RF2 to RF1 conversion by IHTSDO
 
 This stand alone RF2 to RF1 converter has been developed to meet the suggested criteria set out in [IHTSDO's RF1 Deprecation Plan](http://www.ihtsdo.org/news-articles/rf1-deprecation-and-withdrawal-of-support-request-for-feedback).
